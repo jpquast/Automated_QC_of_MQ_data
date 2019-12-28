@@ -1,17 +1,97 @@
-Sample number	Strain	Biol replicate	Techn. Replicate	Pipeline	MS_running order	vial_Position	filename	experiment	replicate_group
-1	HEK293T	1	1	LiP	9	B1	20191101_JPQ016_unfrac_lip_control_01	lip_control_01	control
-2	HEK293T	1	2	LiP	10	B2	20191101_JPQ016_unfrac_lip_control_02	lip_control_02	control
-3	HEK293T	1	3	LiP	11	B3	20191101_JPQ016_unfrac_lip_control_03	lip_control_03	control
-4	HEK293T	1	4	LiP	12	B4	20191101_JPQ016_unfrac_lip_control_04	lip_control_04	control
-5	HEK293T	1	1	LiP	13	B5	20191101_JPQ016_unfrac_lip_DHAP_01	lip_DHAP_01	DHAP
-6	HEK293T	1	2	LiP	14	B6	20191101_JPQ016_unfrac_lip_DHAP_02	lip_DHAP_02	DHAP
-7	HEK293T	1	3	LiP	15	B7	20191101_JPQ016_unfrac_lip_DHAP_03	lip_DHAP_03	DHAP
-8	HEK293T	1	4	LiP	16	B8	20191101_JPQ016_unfrac_lip_DHAP_04	lip_DHAP_04	DHAP
-9	HEK293T	1	1	Trypsin Digest	1	A1	20191101_JPQ016_unfrac_trypsin_control_01	trypsin_control_01	control
-10	HEK293T	1	2	Trypsin Digest	2	A2	20191101_JPQ016_unfrac_trypsin_control_02	trypsin_control_02	control
-11	HEK293T	1	3	Trypsin Digest	3	A3	20191101_JPQ016_unfrac_trypsin_control_03	trypsin_control_03	control
-12	HEK293T	1	4	Trypsin Digest	4	A4	20191101_JPQ016_unfrac_trypsin_control_04	trypsin_control_04	control
-13	HEK293T	1	1	Trypsin Digest	5	A5	20191101_JPQ016_unfrac_trypsin_DHAP_01	trypsin_DHAP_01	DHAP
-14	HEK293T	1	2	Trypsin Digest	6	A6	20191101_JPQ016_unfrac_trypsin_DHAP_02	trypsin_DHAP_02	DHAP
-15	HEK293T	1	3	Trypsin Digest	7	A7	20191101_JPQ016_unfrac_trypsin_DHAP_03	trypsin_DHAP_03	DHAP
-16	HEK293T	1	4	Trypsin Digest	8	A8	20191101_JPQ016_unfrac_trypsin_DHAP_04	trypsin_DHAP_04	DHAP
+Sample number	Strain	Biol replicate	Techn. Replicate	Pipeline	MS_running order	vial_Position	raw_file	experiment	replicate_group
+1	HEK293T	1	1	Trypsin Digest	1	A1	20191101_JPQ016_trypsin_control_01_fraction_01	trypsin_control_01	control
+2	HEK293T	1	1	Trypsin Digest	2	A2	20191101_JPQ016_trypsin_control_01_fraction_02	trypsin_control_01	control
+3	HEK293T	1	1	Trypsin Digest	3	A3	20191101_JPQ016_trypsin_control_01_fraction_03	trypsin_control_01	control
+4	HEK293T	1	1	Trypsin Digest	4	A4	20191101_JPQ016_trypsin_control_01_fraction_04	trypsin_control_01	control
+5	HEK293T	1	1	Trypsin Digest	5	A5	20191101_JPQ016_trypsin_control_01_fraction_05	trypsin_control_01	control
+6	HEK293T	1	1	Trypsin Digest	6	A6	20191101_JPQ016_trypsin_control_01_fraction_06	trypsin_control_01	control
+7	HEK293T	1	3	Trypsin Digest	7	A7	20191101_JPQ016_trypsin_control_02_fraction_01	trypsin_control_02	control
+8	HEK293T	1	4	Trypsin Digest	8	A8	20191101_JPQ016_trypsin_control_02_fraction_02	trypsin_control_02	control
+9	HEK293T	1	1	Trypsin Digest	9	B1	20191101_JPQ016_trypsin_control_02_fraction_03	trypsin_control_02	control
+10	HEK293T	1	2	Trypsin Digest	10	B2	20191101_JPQ016_trypsin_control_02_fraction_04	trypsin_control_02	control
+11	HEK293T	1	3	Trypsin Digest	11	B3	20191101_JPQ016_trypsin_control_02_fraction_05	trypsin_control_02	control
+12	HEK293T	1	4	Trypsin Digest	12	B4	20191101_JPQ016_trypsin_control_02_fraction_06	trypsin_control_02	control
+13	HEK293T	1	1	Trypsin Digest	13	B5	20191101_JPQ016_trypsin_DHAP_01_fraction_01	trypsin_DHAP_01	DHAP
+14	HEK293T	1	2	Trypsin Digest	14	B6	20191101_JPQ016_trypsin_DHAP_01_fraction_02	trypsin_DHAP_01	DHAP
+15	HEK293T	1	3	Trypsin Digest	15	B7	20191101_JPQ016_trypsin_DHAP_01_fraction_03	trypsin_DHAP_01	DHAP
+16	HEK293T	1	4	Trypsin Digest	16	B8	20191101_JPQ016_trypsin_DHAP_01_fraction_04	trypsin_DHAP_01	DHAP
+17	HEK293T	1	1	Trypsin Digest	17	C1	20191101_JPQ016_trypsin_DHAP_01_fraction_05	trypsin_DHAP_01	DHAP
+18	HEK293T	1	2	Trypsin Digest	18	C2	20191101_JPQ016_trypsin_DHAP_01_fraction_06	trypsin_DHAP_01	DHAP
+19	HEK293T	1	3	Trypsin Digest	19	C3	20191101_JPQ016_trypsin_DHAP_02_fraction_01	trypsin_DHAP_02	DHAP
+20	HEK293T	1	4	Trypsin Digest	20	C4	20191101_JPQ016_trypsin_DHAP_02_fraction_02	trypsin_DHAP_02	DHAP
+21	HEK293T	1	1	Trypsin Digest	21	C5	20191101_JPQ016_trypsin_DHAP_02_fraction_03	trypsin_DHAP_02	DHAP
+22	HEK293T	1	2	Trypsin Digest	22	C6	20191101_JPQ016_trypsin_DHAP_02_fraction_04	trypsin_DHAP_02	DHAP
+23	HEK293T	1	3	Trypsin Digest	23	C7	20191101_JPQ016_trypsin_DHAP_02_fraction_05	trypsin_DHAP_02	DHAP
+24	HEK293T	1	4	Trypsin Digest	24	C8	20191101_JPQ016_trypsin_DHAP_02_fraction_06	trypsin_DHAP_02	DHAP
+25	HEK293T	1	1	Trypsin Digest	25	D1	20191101_JPQ016_trypsin_control_03_fraction_01	trypsin_control_03	control
+26	HEK293T	1	2	Trypsin Digest	26	D2	20191101_JPQ016_trypsin_control_03_fraction_02	trypsin_control_03	control
+27	HEK293T	1	3	Trypsin Digest	27	D3	20191101_JPQ016_trypsin_control_03_fraction_03	trypsin_control_03	control
+28	HEK293T	1	4	Trypsin Digest	28	D4	20191101_JPQ016_trypsin_control_03_fraction_04	trypsin_control_03	control
+29	HEK293T	1	1	Trypsin Digest	29	D5	20191101_JPQ016_trypsin_control_03_fraction_05	trypsin_control_03	control
+30	HEK293T	1	2	Trypsin Digest	30	D6	20191101_JPQ016_trypsin_control_03_fraction_06	trypsin_control_03	control
+31	HEK293T	1	3	Trypsin Digest	31	D7	20191101_JPQ016_trypsin_control_04_fraction_01	trypsin_control_04	control
+32	HEK293T	1	4	Trypsin Digest	32	D8	20191101_JPQ016_trypsin_control_04_fraction_02	trypsin_control_04	control
+33	HEK293T	1	1	Trypsin Digest	33	E1	20191101_JPQ016_trypsin_control_04_fraction_03	trypsin_control_04	control
+34	HEK293T	1	2	Trypsin Digest	34	E2	20191101_JPQ016_trypsin_control_04_fraction_04	trypsin_control_04	control
+35	HEK293T	1	3	Trypsin Digest	35	E3	20191101_JPQ016_trypsin_control_04_fraction_05	trypsin_control_04	control
+36	HEK293T	1	4	Trypsin Digest	36	E4	20191101_JPQ016_trypsin_control_04_fraction_06	trypsin_control_04	control
+37	HEK293T	1	1	Trypsin Digest	37	E5	20191101_JPQ016_trypsin_DHAP_03_fraction_01	trypsin_DHAP_03	DHAP
+38	HEK293T	1	2	Trypsin Digest	38	E6	20191101_JPQ016_trypsin_DHAP_03_fraction_02	trypsin_DHAP_03	DHAP
+39	HEK293T	1	3	Trypsin Digest	39	E7	20191101_JPQ016_trypsin_DHAP_03_fraction_03	trypsin_DHAP_03	DHAP
+40	HEK293T	1	4	Trypsin Digest	40	E8	20191101_JPQ016_trypsin_DHAP_03_fraction_04	trypsin_DHAP_03	DHAP
+41	HEK293T	1	1	Trypsin Digest	41	F1	20191101_JPQ016_trypsin_DHAP_03_fraction_05	trypsin_DHAP_03	DHAP
+42	HEK293T	1	2	Trypsin Digest	42	F2	20191101_JPQ016_trypsin_DHAP_03_fraction_06	trypsin_DHAP_03	DHAP
+43	HEK293T	1	3	Trypsin Digest	43	F3	20191101_JPQ016_trypsin_DHAP_04_fraction_01	trypsin_DHAP_04	DHAP
+44	HEK293T	1	4	Trypsin Digest	44	F4	20191101_JPQ016_trypsin_DHAP_04_fraction_02	trypsin_DHAP_04	DHAP
+45	HEK293T	1	1	Trypsin Digest	45	F5	20191101_JPQ016_trypsin_DHAP_04_fraction_03	trypsin_DHAP_04	DHAP
+46	HEK293T	1	2	Trypsin Digest	46	F6	20191101_JPQ016_trypsin_DHAP_04_fraction_04	trypsin_DHAP_04	DHAP
+47	HEK293T	1	3	Trypsin Digest	47	F7	20191101_JPQ016_trypsin_DHAP_04_fraction_05	trypsin_DHAP_04	DHAP
+48	HEK293T	1	4	Trypsin Digest	48	F8	20191101_JPQ016_trypsin_DHAP_04_fraction_06	trypsin_DHAP_04	DHAP
+49	HEK293T	1	1	LiP	49	A1	20191101_JPQ016_lip_control_01_fraction_01	lip_control_01	control
+50	HEK293T	1	2	LiP	50	A2	20191101_JPQ016_lip_control_01_fraction_02	lip_control_01	control
+51	HEK293T	1	3	LiP	51	A3	20191101_JPQ016_lip_control_01_fraction_03	lip_control_01	control
+52	HEK293T	1	4	LiP	52	A4	20191101_JPQ016_lip_control_01_fraction_04	lip_control_01	control
+53	HEK293T	1	1	LiP	53	A5	20191101_JPQ016_lip_control_01_fraction_05	lip_control_01	control
+54	HEK293T	1	2	LiP	54	A6	20191101_JPQ016_lip_control_01_fraction_06	lip_control_01	control
+55	HEK293T	1	3	LiP	55	A7	20191101_JPQ016_lip_control_02_fraction_01	lip_control_02	control
+56	HEK293T	1	4	LiP	56	A8	20191101_JPQ016_lip_control_02_fraction_02	lip_control_02	control
+57	HEK293T	1	1	LiP	57	B1	20191101_JPQ016_lip_control_02_fraction_03	lip_control_02	control
+58	HEK293T	1	2	LiP	58	B2	20191101_JPQ016_lip_control_02_fraction_04	lip_control_02	control
+59	HEK293T	1	3	LiP	59	B3	20191101_JPQ016_lip_control_02_fraction_05	lip_control_02	control
+60	HEK293T	1	4	LiP	60	B4	20191101_JPQ016_lip_control_02_fraction_06	lip_control_02	control
+61	HEK293T	1	1	LiP	61	B5	20191101_JPQ016_lip_DHAP_01_fraction_01	lip_DHAP_01	DHAP
+62	HEK293T	1	2	LiP	62	B6	20191101_JPQ016_lip_DHAP_01_fraction_02	lip_DHAP_01	DHAP
+63	HEK293T	1	3	LiP	63	B7	20191101_JPQ016_lip_DHAP_01_fraction_03	lip_DHAP_01	DHAP
+64	HEK293T	1	4	LiP	64	B8	20191101_JPQ016_lip_DHAP_01_fraction_04	lip_DHAP_01	DHAP
+65	HEK293T	1	1	LiP	65	C1	20191101_JPQ016_lip_DHAP_01_fraction_05	lip_DHAP_01	DHAP
+66	HEK293T	1	2	LiP	66	C2	20191101_JPQ016_lip_DHAP_01_fraction_06	lip_DHAP_01	DHAP
+67	HEK293T	1	3	LiP	67	C3	20191101_JPQ016_lip_DHAP_02_fraction_01	lip_DHAP_02	DHAP
+68	HEK293T	1	4	LiP	68	C4	20191101_JPQ016_lip_DHAP_02_fraction_02	lip_DHAP_02	DHAP
+69	HEK293T	1	1	LiP	69	C5	20191101_JPQ016_lip_DHAP_02_fraction_03	lip_DHAP_02	DHAP
+70	HEK293T	1	2	LiP	70	C6	20191101_JPQ016_lip_DHAP_02_fraction_04	lip_DHAP_02	DHAP
+71	HEK293T	1	3	LiP	71	C7	20191101_JPQ016_lip_DHAP_02_fraction_05	lip_DHAP_02	DHAP
+72	HEK293T	1	4	LiP	72	C8	20191101_JPQ016_lip_DHAP_02_fraction_06	lip_DHAP_02	DHAP
+73	HEK293T	1	1	LiP	73	D1	20191101_JPQ016_lip_control_03_fraction_01	lip_control_03	control
+74	HEK293T	1	2	LiP	74	D2	20191101_JPQ016_lip_control_03_fraction_02	lip_control_03	control
+75	HEK293T	1	3	LiP	75	D3	20191101_JPQ016_lip_control_03_fraction_03	lip_control_03	control
+76	HEK293T	1	4	LiP	76	D4	20191101_JPQ016_lip_control_03_fraction_04	lip_control_03	control
+77	HEK293T	1	1	LiP	77	D5	20191101_JPQ016_lip_control_03_fraction_05	lip_control_03	control
+78	HEK293T	1	2	LiP	78	D6	20191101_JPQ016_lip_control_03_fraction_06	lip_control_03	control
+79	HEK293T	1	3	LiP	79	D7	20191101_JPQ016_lip_control_04_fraction_01	lip_control_04	control
+80	HEK293T	1	4	LiP	80	D8	20191101_JPQ016_lip_control_04_fraction_02	lip_control_04	control
+81	HEK293T	1	1	LiP	81	E1	20191101_JPQ016_lip_control_04_fraction_03	lip_control_04	control
+82	HEK293T	1	2	LiP	82	E2	20191101_JPQ016_lip_control_04_fraction_04	lip_control_04	control
+83	HEK293T	1	3	LiP	83	E3	20191101_JPQ016_lip_control_04_fraction_05	lip_control_04	control
+84	HEK293T	1	4	LiP	84	E4	20191101_JPQ016_lip_control_04_fraction_06	lip_control_04	control
+85	HEK293T	1	1	LiP	85	E5	20191101_JPQ016_lip_DHAP_03_fraction_01	lip_DHAP_03	DHAP
+86	HEK293T	1	2	LiP	86	E6	20191101_JPQ016_lip_DHAP_03_fraction_02	lip_DHAP_03	DHAP
+87	HEK293T	1	3	LiP	87	E7	20191101_JPQ016_lip_DHAP_03_fraction_03	lip_DHAP_03	DHAP
+88	HEK293T	1	4	LiP	88	E8	20191101_JPQ016_lip_DHAP_03_fraction_04	lip_DHAP_03	DHAP
+89	HEK293T	1	1	LiP	89	F1	20191101_JPQ016_lip_DHAP_03_fraction_05	lip_DHAP_03	DHAP
+90	HEK293T	1	2	LiP	90	F2	20191101_JPQ016_lip_DHAP_03_fraction_06	lip_DHAP_03	DHAP
+91	HEK293T	1	3	LiP	91	F3	20191101_JPQ016_lip_DHAP_04_fraction_01	lip_DHAP_04	DHAP
+92	HEK293T	1	4	LiP	92	F4	20191101_JPQ016_lip_DHAP_04_fraction_02	lip_DHAP_04	DHAP
+93	HEK293T	1	1	LiP	93	F5	20191101_JPQ016_lip_DHAP_04_fraction_03	lip_DHAP_04	DHAP
+94	HEK293T	1	2	LiP	94	F6	20191101_JPQ016_lip_DHAP_04_fraction_04	lip_DHAP_04	DHAP
+95	HEK293T	1	3	LiP	95	F7	20191101_JPQ016_lip_DHAP_04_fraction_05	lip_DHAP_04	DHAP
+96	HEK293T	1	4	LiP	96	F8	20191101_JPQ016_lip_DHAP_04_fraction_06	lip_DHAP_04	DHAP

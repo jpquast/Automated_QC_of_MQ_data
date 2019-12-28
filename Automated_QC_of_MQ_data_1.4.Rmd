@@ -30,6 +30,7 @@ The tidyverse package is mainly used.
 **ggrepel:** This package allows the addition of improved labels to ggplot.  
 **pheatmap:** Makes pretty and easy heatmaps.  
 **dendsort:** Sort the dendrogram created for heatmap.  
+**plotly:** Creates interactive figures from ggplot.  
 
 ```{r loading_packages, message=FALSE, warning=FALSE}
 
@@ -40,6 +41,7 @@ library(ggrepel)
 library(pheatmap)
 library(dendsort)
 library(phylotools)
+library(plotly)
 
 ```
 
@@ -156,7 +158,7 @@ Here we define which columns we want to keep for the further analysis of the **p
 
 row_parameters <- c("Version", "User name", "Machine name", "Date of writing", "Min. peptide Length", "Decoy mode", "Fasta file")
 
-columns_evidence <- c("sequence", "modified_sequence", "modifications", "length", "missed_cleavages", "leading_razor_protein", "type", "experiment",  "intensity", "reverse", "potential_contaminant", "charge", "mass_error_ppm", "uncalibrated_mass_error_ppm", "retention_time", "retention_length", "calibrated_retention_time", "ms_ms_count", "match_time_difference")
+columns_evidence <- c("sequence", "modified_sequence", "modifications", "length", "missed_cleavages", "leading_razor_protein", "type",  "intensity", "reverse", "potential_contaminant", "charge", "mass_error_ppm", "uncalibrated_mass_error_ppm", "retention_time", "retention_length", "calibrated_retention_time", "ms_ms_count", "match_time_difference", "raw_file")
 
 columns_peptides <- c("sequence", "n_term_cleavage_window", "c_term_cleavage_window", "amino_acid_before", "first_amino_acid", "last_amino_acid", "amino_acid_after", "h_count", "c_count", "d_count", "e_count", "start_position", "end_position")
 
@@ -174,24 +176,28 @@ The relevant variables from the **summary** dataset are selected and stored in *
 complete <- evidence %>%
   select(columns_evidence, one_of("fraction"))%>%
   left_join((select(peptides, columns_peptides)), by = "sequence") %>%
-  #mutate(experiment = factor(str_to_lower(experiment)))%>%
-  left_join(map, by = "experiment")
+  left_join(map, by = "raw_file")
 
 sample_summary <- summary %>%
-  select(columns_summary)%>%
+  select(one_of("fraction"), columns_summary)%>%
   filter(experiment != "")
 
 ```
 
+
 ```{r figure_vars}
-# determination of figure size variables. Can be ignored and has nothing to do with analysis
-n_samples <- n_distinct(summary$experiment)-1
+#determination of figure size variables. Can be ignored and has nothing to do with analysis
+n_samples <- n_distinct(summary$raw_file)-1
+n_experiments <- n_distinct(summary$experiment)-1
 n_cols <- if_else(n_samples >16, 1, 2)
 n_cols_topN <- case_when(n_samples/4 <=1 ~ 2, n_samples/4 >1 & n_samples/4 <2 ~ 3, n_samples/4 >=2 ~ 4)
 MBR<- "MULTI-MATCH" %in% complete$type
 tryptic <- "Trypsin Digest" %in% complete$pipeline
 lip <- "LiP" %in% complete$pipeline
 fractions <- "fraction" %in% names(complete)
+if(fractions == TRUE){
+real_fractions <- (map %>% group_by(experiment)%>%summarize(n = n())%>%slice(1))$n >1
+}
 #n_fractions <- n_distinct(summary$fraction)-1
 ```
 
@@ -233,7 +239,7 @@ datatable(sample_summary, rownames = FALSE, extensions = 'FixedColumns',
   pageLength = 8,
   lengthMenu = c(4, 8, 16, 32, 50, 100),
   scrollX = TRUE,
-  fixedColumns = list(leftColumns = 1),
+  fixedColumns = list(leftColumns = fractions+1),
   scrollCollapse = TRUE
 ))
 ```
@@ -242,11 +248,23 @@ datatable(sample_summary, rownames = FALSE, extensions = 'FixedColumns',
 
 Plot for each paramter for easier visual identification of differences.
 
-```{r summary_plot, fig.height = (50/n_cols), fig.width = (10+(n_samples*0.2)), fig.align = "center"}
+```{r summary_plot, fig.height = (50/n_cols), fig.width = (10+(n_samples*0.25)), fig.align = "center"}
 
 factor_levels_summary <- str_replace_all(str_replace_all(str_replace_all(as.character(columns_summary), fixed("_"), " "), fixed("2"), "[%]"), fixed("ppm"), "[ppm]")
 
-sample_summary %>%
+if (fractions == TRUE) {sample_summary %>%
+  gather(title, value, -experiment, -fraction)%>%
+  mutate(title = str_replace_all(str_replace_all(str_replace_all(as.character(title), fixed("_"), " "), fixed("2"), "[%]"), fixed("ppm"), "[ppm]"))%>%
+  mutate(title = factor(title, levels = factor_levels_summary), fraction = as.factor(fraction))%>%
+  ggplot(aes(paste(str_to_title(str_replace_all(as.character(experiment), fixed("_"), " "))), value, fill = fraction))+
+  geom_col(col ='black')+
+  labs(x= "", y="")+
+  facet_wrap(~title, scales = "free", ncol=n_cols)+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, hjust =1, size =8))+
+  geom_text(aes(label=round(value, digits=2)), position = position_stack(vjust = 0.5), size = 3)
+} else {
+  sample_summary %>%
   gather(title, value, -experiment)%>%
   mutate(title = str_replace_all(str_replace_all(str_replace_all(as.character(title), fixed("_"), " "), fixed("2"), "[%]"), fixed("ppm"), "[ppm]"))%>%
   mutate(title = factor(title, levels = factor_levels_summary))%>%
@@ -257,6 +275,8 @@ sample_summary %>%
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1, size =8))+
   geom_text(aes(label=round(value, digits=2)), position = position_stack(vjust = 0.5), size = 3)
+}
+
 
 ```
 
@@ -266,13 +286,13 @@ sample_summary %>%
 ```{r RSD, message=FALSE, warning=FALSE}
 RSD <- complete %>%
   filter(!is.na(intensity))%>%
-  group_by(experiment)%>%
+  group_by(raw_file)%>%
   summarize(median = median(intensity))%>%
   mutate(RSD_median = sd(median)/mean(median)*100, mean_median = mean(median), sd_median = sd(median))
 
 RSD_lip <- complete %>%
   filter(!is.na(intensity), pipeline == "LiP")%>%
-  group_by(experiment)%>%
+  group_by(raw_file)%>%
   summarize(median = median(intensity))%>%
   mutate(RSD_median = sd(median)/mean(median)*100, mean_median = mean(median), sd_median = sd(median))
 
@@ -280,7 +300,7 @@ if(nrow(RSD_lip) == 0){RSD_lip[1, ] <- NA}
 
 RSD_trypsin <- complete %>%
   filter(!is.na(intensity), pipeline == "Trypsin Digest")%>%
-  group_by(experiment)%>%
+  group_by(raw_file)%>%
   summarize(median = median(intensity))%>%
   mutate(RSD_median = sd(median)/mean(median)*100, mean_median = mean(median), sd_median = sd(median))
 
@@ -303,23 +323,20 @@ The relative standard deviation of the median run intensities gives an estimate 
 
 ```{r RSD_median_table}
 
-datatable(RSD %>% select(experiment, median), rownames = FALSE, extensions = 'FixedColumns',
+datatable(RSD %>% select(raw_file, median), rownames = FALSE, extensions = 'FixedColumns',
   options = list(
   dom = 'til',
   pageLength = 8,
-  lengthMenu = c(4, 8, 16, 32, 50, 100),
-  scrollX = TRUE,
-  fixedColumns = list(leftColumns = 1),
-  scrollCollapse = TRUE
+  lengthMenu = c(4, 8, 16, 32, 50, 100)
 ))
 ```
 
 
 ## Contaminants
 
-The most abundant contaminants are displayed. The file containing the contaminants can be found under `MaxQuant/bin/conf/contaminants.fasta`. Note that there might be proteins in the list that are part of the proteome you are analysing. 
+The most abundant contaminants for each experiment are displayed. If fractions are used the summed contaminant intensities are displayed. It does not make much sense to look at contaminants for single fractions of the original sample. The file containing the contaminants can be found under `MaxQuant/bin/conf/contaminants.fasta`. Note that there might be proteins in the list that are part of the proteome you are analysing. 
 
-```{r contaminants, fig.width=(6+(n_samples*0.15)), fig.height=6, fig.align = "center"}
+```{r contaminants, fig.width=(6+(n_experiments*0.15)), fig.height=6, fig.align = "center"}
 
 complete_clean_contaminants %>%
   group_by(experiment)%>%
@@ -357,9 +374,9 @@ Most common contaminants:
 
 ## Missed cleavages
 
-The percentage of missed cleavages is evaluated for peptides identified by MS/MS. Contaminants are excluded since they might have been introduced after the digestion step. A missed cleavage is counted even if the R/K is followed by a P. Thus, the estimate is more conservative and higher than for other search engines. In addition if there is an R/K prior to the last R/K it is counted as a missed cleavage.
+The percentage of missed cleavages is evaluated for peptides identified by MS/MS. For fractionated samples the percentage of peptides with missed cleavages in all fractions together was calculated. Contaminants are excluded. A missed cleavage is counted even if the R/K is followed by a P. Thus, the estimate is more conservative and higher than for other search engines. In addition if there is an R/K prior to the last R/K it is counted as a missed cleavage.
 
-```{r missed_cleavages, fig.width=(6+(n_samples*0.25)), fig.height=6, fig.align = "center"}
+```{r missed_cleavages, fig.width=(6+(n_experiments*0.25)), fig.height=6, fig.align = "center"}
 
 missed_cleavages <- complete_clean %>%
   filter(type == "MULTI-MSMS"| type == "MSMS")%>%
@@ -386,10 +403,12 @@ missed_cleavages%>%
 ## Charge distribution
 
 Under common experimental conditions, tryptic peptides are generally expected to carry two charges (one N-terminal and one at the C-terminal R or K residue). However, charge states can also reach 3 (or higher). A single peptide species can occur in multiple charge states, charge two usually being the most abundant. Several factors, such as the presence of additional basic amino acids (e.g. due to missed cleavages), the spray parameters or the pH of the eluents, can shift the distribution towards higher
-charge states.
+charge states. LiP samples usually show more peptides of lower charge states due to a higher abundance of semi-tryptic peptides.
+
+For fractionated samples the result represents a summary for all the fractions of one condition replicate. 
 
 
-```{r charge, fig.width=(6+(n_samples*0.25)), fig.height=6, fig.align = "center"}
+```{r charge, fig.width=(6+(n_experiments*0.25)), fig.height=6, fig.align = "center"}
 charge <- complete %>%
   count(experiment, charge)%>%
   group_by(experiment)%>%
@@ -416,7 +435,9 @@ An oversampled 3D-peak is defined as a peak whose peptide ion (same sequence and
 
 The MS/MS count variable from the evidence file is used for the calculation. 
 
-```{r oversampling, fig.width=(6+(n_samples*0.25)), fig.height=6, fig.align = "center"}
+For fractionated samples the result represents a summary for all the fractions of one condition replicate. 
+
+```{r oversampling, fig.width=(6+(n_experiments*0.25)), fig.height=6, fig.align = "center"}
 
 oversampling <- complete %>%
   filter(ms_ms_count != 0)%>%
@@ -442,36 +463,35 @@ oversampling %>%
   theme(axis.text.x = element_text(angle = 45, hjust =1))
 ```
 
-## Uncalibrated mass error
-
+## Uncalibrated mass error per sample
 Includes peptides identified by match between runs and secondary peptides.
 
-```{r uncalibrated_mass_error}
+```{r uncalibrated_mass_error, fig.height = 8, fig.width = 10+n_samples*0.01}
 complete %>%
-  select(experiment, uncalibrated_mass_error_ppm)%>%
+  select(raw_file, uncalibrated_mass_error_ppm)%>%
   filter(!is.na(uncalibrated_mass_error_ppm))%>%
-  group_by(experiment)%>%
+  group_by(raw_file)%>%
   mutate(sd = sd(uncalibrated_mass_error_ppm))%>%
-  ggplot(aes(paste(str_replace_all(as.character(experiment), fixed("_"), " "), "(sd =", as.character(round(sd, digits = 2)), ")"), uncalibrated_mass_error_ppm))+
+  ggplot(aes(paste(str_replace_all(as.character(raw_file), fixed("_"), " "), "(sd =", as.character(round(sd, digits = 2)), ")"), uncalibrated_mass_error_ppm))+
   geom_boxplot()+
-  labs(title = "Uncalibrated mass error", subtitle = "Including decoys, including contaminants, including MBP and SECPEP", x = "Experiment", y = expression(paste(Delta, "mass [ppm]")))+
+  labs(title = "Uncalibrated mass error", subtitle = "Including decoys, including contaminants, including MBP and SECPEP", x = "Sample", y = expression(paste(Delta, "mass [ppm]")))+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
 ```
 
-## Calibrated mass error
+## Calibrated mass error per sample
 
 Includes peptides identified by match between runs and secondary peptides.
 
-```{r calibrated_mass_error}
+```{r calibrated_mass_error, , fig.height = 8, fig.width = 10+n_samples*0.01}
 complete %>%
-  select(experiment, mass_error_ppm)%>%
+  select(raw_file, mass_error_ppm)%>%
   filter(!is.na(mass_error_ppm))%>%
-  group_by(experiment)%>%
+  group_by(raw_file)%>%
   mutate(sd = sd(mass_error_ppm))%>%
-  ggplot(aes(paste(str_replace_all(as.character(experiment), fixed("_"), " "), "(sd =", as.character(round(sd, digits = 2)), ")"), mass_error_ppm))+
+  ggplot(aes(paste(str_replace_all(as.character(raw_file), fixed("_"), " "), "(sd =", as.character(round(sd, digits = 2)), ")"), mass_error_ppm))+
   geom_boxplot()+
-  labs(title = "Calibrated mass error", subtitle = "Including decoys, including contaminants, including MBP and SECPEP", x = "Experiment", y = expression(paste(Delta, "mass [ppm]")))+
+  labs(title = "Calibrated mass error", subtitle = "Including decoys, including contaminants, including MBP and SECPEP", x = "Sample", y = expression(paste(Delta, "mass [ppm]")))+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
 ```
@@ -481,22 +501,14 @@ complete %>%
 For every minute of the run, the median peak width is calculated and displayed.
 
 ```{r peak_width_over_RT}
-complete %>%
-  select(experiment, retention_time, retention_length)%>%
+peak_width <- complete %>%
+  select(raw_file, retention_time, retention_length)%>%
   ggplot(aes(retention_time, retention_length))+
-  geom_line(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, stat = "summary_bin", fun.y = median, binwidth = 1)+
-    labs(title = "Median peak width over retention time", subtitle = "Including decoys, including contaminants", x = "Retention time [min]", y = "Median peak width [min]", color = "Experiment")+
+  geom_line(aes(col = paste(str_replace_all(as.character(raw_file), fixed("_"), " "))), size = 0.5, stat = "summary_bin", fun.y = median, binwidth = 1)+
+    labs(title = "Median peak width over retention time", subtitle = "Including decoys, including contaminants", x = "Retention time [min]", y = "Median peak width [min]", color = "Sample")+
   theme_bw()
-```
 
-```{r peak_width_over_RT_zoom}
-complete %>%
-  select(experiment, retention_time, retention_length)%>%
-  ggplot(aes(retention_time, retention_length))+
-  geom_line(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, stat = "summary_bin", fun.y = median, binwidth = 1)+
-    labs(title = "Median peak width over retention time [Zoom]", subtitle = "Including decoys, including contaminants", x = "Retention time [min]", y = "Median peak width [min]",  color = "Experiment")+
-  theme_bw()+
-  coord_cartesian(ylim = c(0, 1.5))
+ggplotly(peak_width)
 ```
 
 ## Identifications over retention time
@@ -504,13 +516,15 @@ complete %>%
 The number of identified peptides over retention time. Including MBR. Bindwidth is 1 minute.
 
 ```{r IDs_over_RT}
-complete %>%
-  select(experiment, retention_time)%>%
+id_over_RT <- complete %>%
+  select(raw_file, retention_time)%>%
   mutate(count = 1)%>%
   ggplot(aes(retention_time, count))+
-  geom_line(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, stat = "summary_bin", fun.y = sum, binwidth = 1)+
-    labs(title = "Peptide identifications over retention time", subtitle = "Including decoys, including contaminants", x = "Retention time [min]", y = "ID count per minute", color = "Experiment")+
+  geom_line(aes(col = paste(str_replace_all(as.character(raw_file), fixed("_"), " "))), size = 0.5, stat = "summary_bin", fun.y = sum, binwidth = 1)+
+    labs(title = "Peptide identifications over retention time", subtitle = "Including decoys, including contaminants", x = "Retention time [min]", y = "ID count per minute", color = "Sample")+
   theme_bw()
+
+ggplotly(id_over_RT)
 ```
 
 ## TopN over retention time
@@ -520,18 +534,20 @@ TopN is the number of MS/MS scans recorded per MS spectrum. TopN depends on the 
 ```{r topn_rt}
 
 topn_rt <- msmsscans %>%
-  select(experiment, retention_time, ms_scan_number)%>%
-  group_by(experiment)%>%
+  select(raw_file, retention_time, ms_scan_number)%>%
+  group_by(raw_file)%>%
   mutate(binRT = round(retention_time/2)*2)%>%
-  count(experiment, binRT, ms_scan_number, name="topN")%>%
-  group_by(experiment, binRT)%>%
+  count(raw_file, binRT, ms_scan_number, name="topN")%>%
+  group_by(raw_file, binRT)%>%
   mutate(median_topN = median(topN))
 
-topn_rt%>%
+topn_rt_plot <- topn_rt%>%
   ggplot(aes(binRT, median_topN))+
-  geom_line(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, )+
-    labs(title = "TopN over retention time", x = "Retention time [min]", y = "TopN [median per 2 min RT bin]", color = "Experiment")+
+  geom_line(aes(col = paste(str_replace_all(as.character(raw_file), fixed("_"), " "))), size = 0.5, )+
+    labs(title = "TopN over retention time", x = "Retention time [min]", y = "TopN [median per 2 min RT bin]", color = "Sample")+
   theme_bw()
+
+ggplotly(topn_rt_plot)
   
 ```
 
@@ -544,7 +560,7 @@ TopN is the number of MS/MS scans recorded per MS spectrum.The frequency for eac
 topn_rt%>%
   ggplot(aes(topN))+
   geom_histogram(binwidth = 1, color = "black", fill = "steelblue1")+
-  facet_wrap(~paste(str_replace_all(as.character(experiment), fixed("_"), " ")), ncol=n_cols_topN)+
+  facet_wrap(~paste(str_replace_all(as.character(raw_file), fixed("_"), " ")), ncol=n_cols_topN)+
   labs(title = "TopN frequency", x = "TopN", y = "Frequency")+
   theme_bw()
 
@@ -568,11 +584,11 @@ print("No Match between runs was carried out by MaxQuant")
 ```
 
 
-```{r alignment_no_fractions, fig.height = 4+(n_samples*0.3), fig.width = 10, fig.align = "center", eval=MBR&!fractions}
+```{r alignment_no_fractions, fig.height = 4+(n_samples*0.5), fig.width = 10, fig.align = "center", eval=MBR&!fractions}
 
 alignment <- complete %>%
   filter(type == "MULTI-MSMS")%>%
-  select(modified_sequence, charge, experiment, ms_running_order, calibrated_retention_time)%>%
+  select(modified_sequence, charge, raw_file, ms_running_order, calibrated_retention_time)%>%
   group_by(modified_sequence, charge)%>%
   filter(n()>1)%>%
   group_by(modified_sequence, charge, ms_running_order)%>%
@@ -584,25 +600,25 @@ alignment <- complete %>%
   select(-n)%>%
   arrange(ms_running_order, .by_group = TRUE)%>%
   mutate(delta_RT = calibrated_retention_time - first(calibrated_retention_time))%>%
-  group_by(experiment)%>%
+  group_by(raw_file)%>%
   mutate(fraction_good = (sum(delta_RT<0.7&delta_RT>-0.7)/n()))%>%
   mutate(quality = ifelse(delta_RT<0.7 & delta_RT>-0.7, "Good (<0.7 min)", "Bad (>0.7 min)"))
  
 alignment %>% 
   ggplot(aes(calibrated_retention_time, delta_RT, col = quality))+
   geom_point()+
-  facet_wrap(~paste(str_to_title(str_replace_all(as.character(experiment), fixed("_"), " ")), paste("(Alignment: ",(round(alignment$fraction_good,3)*100), "%)" )), ncol=2)+
+  facet_wrap(~paste(str_to_title(str_replace_all(as.character(raw_file), fixed("_"), " ")), paste("(Alignment: ",(round(alignment$fraction_good,3)*100), "%)" )), ncol=2)+
   labs(title = "Run alignment", subtitle = "Including decoys, including contaminants", x = "Calibrated Retention time [min]", y = expression(paste(Delta, "RT [min]")), color = "Quality")+
   coord_cartesian(ylim = c(2, -2))+
   theme_bw()
 
 ```
 
-```{r alignment_fractions, fig.height = 4+(n_samples*0.3), fig.width = 10, fig.align = "center", eval=MBR&fractions}
+```{r alignment_fractions, fig.height = 4+(n_samples*0.5), fig.width = 10, fig.align = "center", eval=MBR&fractions}
 
 alignment <- complete %>%
   filter(type == "MULTI-MSMS")%>%
-  select(modified_sequence, charge, experiment, ms_running_order, calibrated_retention_time, fraction)%>%
+  select(modified_sequence, charge, raw_file, ms_running_order, calibrated_retention_time, fraction)%>%
   group_by(fraction)%>%
   mutate(min_run = min(ms_running_order))%>%
   group_by(modified_sequence, charge, fraction)%>%
@@ -616,14 +632,14 @@ alignment <- complete %>%
   select(-n)%>%
   arrange(ms_running_order, .by_group = TRUE)%>%
   mutate(delta_RT = calibrated_retention_time - first(calibrated_retention_time))%>%
-  group_by(experiment, fraction)%>%
+  group_by(raw_file, fraction)%>%
   mutate(fraction_good = (sum(delta_RT<0.7&delta_RT>-0.7)/n()))%>%
   mutate(quality = ifelse(delta_RT<0.7 & delta_RT>-0.7, "Good (<0.7 min)", "Bad (>0.7 min)"))
  
 alignment %>% 
   ggplot(aes(calibrated_retention_time, delta_RT, col = quality))+
   geom_point()+
-  facet_wrap(~paste(str_replace_all(as.character(experiment), fixed("_"), " "), paste("(Alignment: ",(round(alignment$fraction_good,3)*100), "%)" )), ncol=2)+
+  facet_wrap(~paste(str_replace_all(as.character(raw_file), fixed("_"), " "), paste("(Alignment: ",(round(alignment$fraction_good,3)*100), "%)" )), ncol=2)+
   labs(title = "Run alignment of fractions", subtitle = "Including decoys, including contaminants", x = "Calibrated Retention time [min]", y = expression(paste(Delta, "RT [min]")), color = "Quality")+
   coord_cartesian(ylim = c(2, -2))+
   theme_bw()
@@ -717,7 +733,7 @@ in_rt_diff <- rt_diff %>%
 
 ```
 
-```{r ID_transfer_quality, fig.width=(10+(n_samples*0.25)), fig.height=6, fig.align = "center", eval=MBR}
+```{r ID_transfer_quality, fig.width=(10+(n_experiments*0.25)), fig.height=6, fig.align = "center", eval=MBR}
 ID_transfer <- ID_transfer_single %>%
   left_join(in_rt_diff, by = "experiment")%>%
   mutate(non_single_native = 1 - single_native, non_single_matched = 1 - single_matched, non_single_all = 1 - single_all)%>%
@@ -759,21 +775,22 @@ print("No Match between runs was carried out by MaxQuant")
 ```
 
 ```{r MBR_inferred, eval=MBR}
-complete %>%
-  select(experiment, type)%>%
-  group_by(experiment)%>%
+MBR_inferred <- complete %>%
+  select(raw_file, type)%>%
+  group_by(raw_file)%>%
   mutate(n = n())%>%
   mutate(match = ifelse(type == "MULTI-MATCH", 1, 0))%>%
   mutate(mbr = sum(match))%>%
   mutate(gain = (mbr/(n-mbr)*100))%>%
   select(-type, -match)%>%
   distinct()%>%
-  ggplot(aes(mbr, gain, col = paste(str_replace_all(as.character(experiment), fixed("_"), " ")) ))+
+  ggplot(aes(mbr, gain, col = paste(str_replace_all(as.character(raw_file), fixed("_"), " ")) ))+
   geom_point()+
-  labs(title = "Peptides inferred by MBR", subtitle = "Including decoys, including contaminants", x = "Number of transfered ID's", y = "Gain on top of genuine ID's [%]", color = "Experiment")+
+  labs(title = "Peptides inferred by MBR", subtitle = "Including decoys, including contaminants", x = "Number of transfered ID's", y = "Gain on top of genuine ID's [%]", color = "Sample")+
   expand_limits(x = 0, y = 0)+
   theme_bw()
-  
+
+ggplotly(MBR_inferred)
 ```
 
 
@@ -799,9 +816,31 @@ complete_clean %>%
   summarize(total_peptides = n_distinct(sequence))
 ```
 
-It is checked in how many samples a certain peptide is identified and then summed up for the amount of samples. That means this shows how many peptides are countained in all samples, only one sample or anything in between. 
+The following graph shows in how many samples a certain peptide is identified and then summed up for the amount of samples. That means this shows how many peptides are countained in all samples, only one sample or anything in between. For fractionated samples the result also contains a summary for combined fractions of one condition replicate.
 
-```{r peptides_samples, fig.align = "center", fig.height=6, fig.width=(6+(n_samples*0.25)), message=FALSE, warning=FALSE}
+```{r fractions_peptides_samples, fig.align = "center", fig.height=6, fig.width=(6+(n_samples*0.03)), message=FALSE, warning=FALSE}
+
+  peptides_samples <- complete_clean %>%
+  distinct(sequence, raw_file)%>%
+  count(sequence, name = "number_of_samples")%>%
+  count(number_of_samples, name = "number_of_peptides")
+
+peptides_samples_lable <- peptides_samples$number_of_peptides
+
+peptides_samples_plot <- peptides_samples%>%
+  ggplot(aes(factor(number_of_samples),number_of_peptides))+
+  geom_col(fill = "steelblue1", col = "black")+
+  geom_text(aes(label=peptides_samples_lable, y = number_of_peptides + max(number_of_peptides)*0.03), size=4)+
+  labs(title = "Number of peptides identified in X amount of samples", x = "Amount of Samples", y = "Number of Peptides")+
+  theme_bw()+
+  coord_cartesian(ylim = c(0, (max(peptides_samples$number_of_peptides))+1000))
+
+ggplotly(peptides_samples_plot)
+
+```
+
+
+```{r peptides_samples, fig.align = "center", fig.height=6, fig.width=(6+(n_experiments*0.25)), message=FALSE, warning=FALSE, eval = real_fractions}
 
 peptides_samples <- complete_clean %>%
   distinct(sequence, experiment)%>%
@@ -814,16 +853,16 @@ peptides_samples%>%
   ggplot(aes(factor(number_of_samples),number_of_peptides))+
   geom_col(fill = "steelblue1", col = "black")+
   geom_text(aes(label=peptides_samples_lable, y = number_of_peptides + max(number_of_peptides)*0.03), size=4)+
-  labs(title = "Number of peptides identified in X amount of samples", x = "Amount of Samples", y = "Number of Peptides")+
+  labs(title = "Number of peptides identified in X amount of condition replicates", subtitle = "Created by summarizing fractions", x = "Amount of condition replicates", y = "Number of Peptides")+
   theme_bw()+
   coord_cartesian(ylim = c(0, (max(peptides_samples$number_of_peptides))+1000))
 
 ```
 
 
-The number of total peptides identified in each sample is analysed. In addition the cumulative identified total unique peptides (**cum_peptides**) is shown. The order should be the run order.
+The number of total peptides identified in each sample is analysed. In addition the number of cumulative identified total unique peptides is shown. That means how many peptides are added to the total peptides with each sample that were not identified in the samples before. For fractionated samples the result represents a summary for all the fractions of one condition replicate.
 
-```{r peptides_per_sample_cum, fig.width=(6+(n_samples*0.3)), fig.height=6, fig.align = "center"}
+```{r peptides_per_sample_cum, fig.width=(6+(n_experiments*0.3)), fig.height=6, fig.align = "center", message=FALSE, warning=FALSE}
 cum_peptides <- complete_clean %>%
   distinct(sequence, experiment)%>%
   spread(experiment, - sequence)%>%
@@ -841,6 +880,7 @@ cum_peptides <- complete_clean %>%
 cum_peptides <- complete_clean %>%
   distinct(sequence, experiment)%>%
   count(experiment, name = "total_peptides")%>%
+  mutate(experiment = factor(experiment))%>%
   left_join(cum_peptides, by = "experiment")
 
 #gather + make "type" factor and reverse order of levels
@@ -857,7 +897,7 @@ cum_peptides%>%
   geom_col(position = "identity", col = "black")+
   scale_fill_manual(values = c("total_peptides" = "steelblue1", "total_cum_peptides" = "brown1"), name = "Peptides", labels = c("per Sample", "cumulative over Samples"))+
   geom_text(aes(label=peptides, y = peptides + max(peptides) *0.03), size =3)+
-  labs(title = "Total unique Peptides per Sample and cumulative over Samples", x = "Experiment", y = "Number of Peptides")+
+  labs(title = "Total Peptides per Sample and cumulative over Samples", x = "Experiment", y = "Number of Peptides")+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
   
@@ -865,7 +905,10 @@ cum_peptides%>%
 
 ## Semi-tryptic peptides
 
-```{r semi_tryptic, , fig.width=(6+(n_samples*0.4)), fig.height=6, fig.align = "center"}
+For LiP samples a high number of semi-tryptic peptides is expected. 
+For fractionated samples the result represents a summary for all the fractions of one condition replicate.
+
+```{r semi_tryptic, , fig.width=(6+(n_experiments*0.4)), fig.height=6, fig.align = "center"}
 
 semi_tryptic <- complete_clean %>%
   mutate(N_term_tryp = ifelse(amino_acid_before == "-" | amino_acid_before == "K" | amino_acid_before == "R", TRUE, FALSE ))%>%
@@ -893,7 +936,11 @@ semi_tryptic %>%
 The total amount of proteins in the reference genome is **`r proteome %>% summarize(n_distinct(uniprot_id))`**.  
 The total amount of identified proteins is **`r complete_clean %>% summarize(n_distinct(leading_razor_protein))`**. 
 
-```{r proteins, message=FALSE, warning=FALSE, fig.width=(6+(n_samples*0.25)), fig.height=6, fig.align = "center"}
+The graph shows the percentage of the reference proteome that was identified in each sample.  
+
+For fractionated samples this result represents a summary for all the fractions of one condition replicate. In addition the proteome coverage of each fraction is shown.
+
+```{r proteins, message=FALSE, warning=FALSE, fig.width=(6+(n_experiments*0.25)), fig.height=6, fig.align = "center"}
 
 proteins <- complete_clean %>%
   summarize(proteins_detected = n_distinct(leading_razor_protein))%>%
@@ -918,6 +965,34 @@ complete_clean %>%
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
 
+```
+
+```{r proteins_fractions, message=FALSE, warning=FALSE, fig.width=(6+(n_samples*0.03)), fig.height=8, fig.align = "center", eval=real_fractions}
+
+proteins <- complete_clean %>%
+  summarize(proteins_detected = n_distinct(leading_razor_protein))%>%
+  mutate(raw_file = "Total")
+
+proteome_count <- proteome %>%
+  summarize(proteins_proteome = n_distinct(uniprot_id))
+
+proteins_plot <- complete_clean %>%
+  group_by(raw_file)%>%
+  summarize(proteins_detected = n_distinct(leading_razor_protein))%>%
+  bind_rows(proteins)%>%
+  mutate(proteins_difference = proteome_count$proteins_proteome-proteins_detected)%>%
+  mutate(proteins_difference = proteins_difference/proteome_count$proteins_proteome*100, proteins_detected = proteins_detected/proteome_count$proteins_proteome*100)%>%
+  gather(type, number, -raw_file)%>%
+  mutate(raw_file = relevel(factor(str_replace_all(as.character(raw_file), fixed("_"), " ")),"Total"), type = fct_rev(factor(type)))%>%
+  ggplot(aes(raw_file, number, fill=type))+
+  geom_bar(col = "black", stat="identity")+
+  labs(title = "Proteome coverage of each sample", x = "", y = "Proteome [%]")+
+  scale_fill_manual(values = c("proteins_detected" = "steelblue1", "proteins_difference" = "brown1"), name = "Proteins", labels = c("Not detected", "Detected"))+
+  geom_text(aes(label= round(number,1)), position = position_stack(vjust = 0.5), size=4)+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, hjust =1))
+
+ggplotly(proteins_plot)
 ```
 
 # Quantitative analysis
@@ -1035,7 +1110,7 @@ cv_peptide_trypsin %>%
 
 ## Principal component analysis of peptide intensities
 
-```{r PCA, fig.align="center", fig.height=(4+(n_samples*0.2)), fig.width=(4+(n_samples*0.2)), message=FALSE, warning=FALSE}
+```{r PCA, fig.align="center", fig.height=(4+(n_experiments*0.2)), fig.width=(4+(n_experiments*0.2)), message=FALSE, warning=FALSE}
 pca_input <- complete_clean %>%
   filter(!is.na(intensity))%>%
   select(sequence, intensity, experiment)%>%
@@ -1050,7 +1125,7 @@ pca <- prcomp(pca_input, center = TRUE)
 
 pca_df <- as.data.frame(pca$x)%>%
   mutate(experiment = factor(row.names(.)))%>%
-  left_join(map, by = "experiment")
+  left_join(map%>%distinct(experiment, replicate_group, pipeline)%>%mutate(experiment = as.factor(experiment)), by = "experiment")
 
 pca_sdev_df <- as.data.frame(pca$sdev)
 pca_sdev_df <- pca_sdev_df %>%
@@ -1059,18 +1134,18 @@ pca_sdev_df <- pca_sdev_df %>%
 pca_df%>%
 ggplot(aes(PC1, PC2, col=replicate_group, shape = pipeline))+
 geom_point(size = 3)+
-labs(title = "Principal component analysis of samples", subtitle = "Excluding decoys, excluding contaminants", x = paste("PC1", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 1],1), "%)"), y = paste("PC2", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 2],1), "%)"), color = "Experiment", shape = "Pipeline")+
+labs(title = "Principal component analysis of condition replicates", subtitle = "Excluding decoys, excluding contaminants", x = paste("PC1", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 1],1), "%)"), y = paste("PC2", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 2],1), "%)"), color = "Experiment", shape = "Pipeline")+
 geom_text_repel(aes(label = paste(str_replace_all(as.character(experiment), fixed("_"), " ")),  color = replicate_group), size = 4, show.legend = FALSE)+
 theme_bw()
 
 
 ```
 
-## Correlation of samples 
+## Correlation of condition replicates 
 
-Check the correlation of samples based on their peptide intensities.
+Check the correlation of condition replicates based on their peptide intensities.
 
-```{r correlation, fig.width=(6+(n_samples*0.25)), fig.height=(6+(n_samples*0.25)), fig.align = "center"}
+```{r correlation, fig.width=(6+(n_experiments*0.25)), fig.height=(6+(n_experiments*0.25)), fig.align = "center"}
 correlation <- complete_clean %>% 
   filter(!is.na(intensity))%>%
   group_by(experiment, sequence)%>%
@@ -1132,6 +1207,22 @@ normalised %>%
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
 
+RSD_lip_summarized <- complete_clean %>%
+  filter(!is.na(intensity), pipeline == "LiP")%>%
+  group_by(experiment)%>%
+  summarize(median = median(intensity))%>%
+  mutate(RSD_median = sd(median)/mean(median)*100, mean_median = mean(median), sd_median = sd(median))
+
+if(nrow(RSD_lip) == 0){RSD_lip[1, ] <- NA}
+
+RSD_trypsin_summarized <- complete_clean %>%
+  filter(!is.na(intensity), pipeline == "Trypsin Digest")%>%
+  group_by(experiment)%>%
+  summarize(median = median(intensity))%>%
+  mutate(RSD_median = sd(median)/mean(median)*100, mean_median = mean(median), sd_median = sd(median))
+
+if(nrow(RSD_trypsin) == 0){RSD_trypsin[1, ] <- NA}
+
 RSD_lip_normalised <- normalised %>%
   filter(!is.na(normalised_intensity), pipeline == "LiP")%>%
   group_by(experiment)%>%
@@ -1152,17 +1243,17 @@ if(nrow(RSD_trypsin_normalised) == 0){RSD_trypsin_normalised[1, ] <- NA}
 
 ### LiP
 
-**RSD of median intensities: `r RSD_lip %>% select(RSD_median)%>%distinct()%>%round(digits =2)`%**  
+**RSD of median intensities: `r RSD_lip_summarized %>% select(RSD_median)%>%distinct()%>%round(digits =2)`%**  
 **RSD of normalised median intensities: `r RSD_lip_normalised %>% select(RSD_median)%>%distinct()%>%round(digits =2)`%**
 
 ### Trypsin
 
-**RSD of median intensities: `r RSD_trypsin %>% select(RSD_median)%>%distinct()%>%round(digits =2)`%**  
+**RSD of median intensities: `r RSD_trypsin_summarized %>% select(RSD_median)%>%distinct()%>%round(digits =2)`%**  
 **RSD of normalised median intensities: `r RSD_trypsin_normalised %>% select(RSD_median)%>%distinct()%>%round(digits =2)`%**
 
 ## Principal component analysis of normalised peptide intensities
 
-```{r PCA_normalised, fig.align="center", fig.height=(4+(n_samples*0.2)), fig.width=(4+(n_samples*0.2)), message=FALSE, warning=FALSE}
+```{r PCA_normalised, fig.align="center", fig.height=(4+(n_experiments*0.2)), fig.width=(4+(n_experiments*0.2)), message=FALSE, warning=FALSE}
 pca_input_normalised <- normalised %>%
   filter(!is.na(normalised_intensity))%>%
   select(sequence, normalised_intensity, experiment)%>%
@@ -1177,7 +1268,7 @@ pca_normalised <- prcomp(pca_input_normalised, center = TRUE)
 
 pca_df_normalised <- as.data.frame(pca_normalised$x)%>%
   mutate(experiment = factor(row.names(.)))%>%
-  left_join(map, by = "experiment")
+  left_join(map%>%distinct(experiment, replicate_group, pipeline)%>% mutate(experiment = as.factor(experiment), by = "experiment"))
 
 pca_sdev_df_normalised <- as.data.frame(pca_normalised$sdev)
 pca_sdev_df_normalised <- pca_sdev_df_normalised %>%
@@ -1197,7 +1288,7 @@ theme_bw()
 
 Check the correlation of samples based on their peptide intensities. Tryptic digests should not show any clustering based on replicate groups. LiP samples can show slight clustering into replicate groups depending on the extend of the effect caused by the treatment.
 
-```{r correlation_normalization, fig.width=(6+(n_samples*0.25)), fig.height=(6+(n_samples*0.25)), fig.align = "center"}
+```{r correlation_normalization, fig.width=(6+(n_experiments*0.25)), fig.height=(6+(n_experiments*0.25)), fig.align = "center"}
 correlation_normalised <- normalised %>% 
   filter(!is.na(normalised_intensity))%>%
   distinct(experiment, normalised_intensity, sequence)%>%
