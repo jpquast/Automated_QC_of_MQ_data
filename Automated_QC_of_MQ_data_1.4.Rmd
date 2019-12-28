@@ -30,6 +30,7 @@ The tidyverse package is mainly used.
 **ggrepel:** This package allows the addition of improved labels to ggplot.  
 **pheatmap:** Makes pretty and easy heatmaps.  
 **dendsort:** Sort the dendrogram created for heatmap.  
+**plotly:** Creates interactive figures from ggplot.  
 
 ```{r loading_packages, message=FALSE, warning=FALSE}
 
@@ -482,7 +483,7 @@ complete %>%
 For every minute of the run, the median peak width is calculated and displayed.
 
 ```{r peak_width_over_RT}
-complete %>%
+peak_width <- complete %>%
   select(experiment, retention_time, retention_length)%>%
   ggplot(aes(retention_time, retention_length))+
   geom_line(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, stat = "summary_bin", fun.y = median, binwidth = 1)+
@@ -490,15 +491,10 @@ complete %>%
   theme_bw()
 ```
 
-```{r peak_width_over_RT_zoom}
-complete %>%
-  select(experiment, retention_time, retention_length)%>%
-  ggplot(aes(retention_time, retention_length))+
-  geom_line(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, stat = "summary_bin", fun.y = median, binwidth = 1)+
-    labs(title = "Median peak width over retention time [Zoom]", subtitle = "Including decoys, including contaminants", x = "Retention time [min]", y = "Median peak width [min]",  color = "Experiment")+
-  theme_bw()+
-  coord_cartesian(ylim = c(0, 1.5))
+```{r peak_width_over_RT_plot}
+ggplotly(peak_width)
 ```
+
 
 ## Identifications over retention time
 
