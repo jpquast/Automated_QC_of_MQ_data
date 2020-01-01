@@ -289,7 +289,7 @@ RSD_trypsin <- complete %>%
 if(nrow(RSD_trypsin) == 0){RSD_trypsin[1, ] <- NA}
 ```
 
-The relative standard deviation of the median run intensities gives an estimate of how similar the runs are to eachother. Ideally the value is low, which indicates a low standard deviation compared to the mean. The unit of RSD is percent. The RSD should not be calculated on log transformed values as it will result in an underestimation. There is an [adjusted formular](http://medcraveonline.com/MOJPB/MOJPB-06-00200.pdf), which will be used later to access normalization of log2 transformed data. 
+The relative standard deviation of the median run intensities gives an estimate of how similar the runs are to eachother. Ideally the value is low, which indicates a low standard deviation compared to the mean. The unit of RSD is percent. The RSD should not be calculated on log transformed values as it will result in an underestimation. 
 
 ### LiP
 
@@ -820,7 +820,7 @@ peptides_samples%>%
 
 The number of total peptides identified in each sample is analysed. In addition the cumulative identified total unique peptides (**cum_peptides**) is shown. The order should be the run order.
 
-```{r peptides_per_sample_cum, fig.width=(6+(n_samples*0.3)), fig.height=6, fig.align = "center"}
+```{r peptides_per_sample_cum, fig.width=(6+(n_samples*0.3)), fig.height=6, fig.align = "center", message=FALSE, warning=FALSE}
 cum_peptides <- complete_clean %>%
   distinct(sequence, experiment)%>%
   spread(experiment, - sequence)%>%
@@ -1085,14 +1085,13 @@ pheatmap()
 
 ## Median normalization
 
-Before median normalisation data was log2 transformed in order to make mean and variance independent. Now a change of x units is as significant for highly abundant peptides, as it is for low abundant ones.
-
+After median normalisation data was log2 transformed in order to make mean and variance independent. This is important for further statistical testing due to the fact that then a change of x units is as significant for highly abundant peptides, as it is for low abundant ones.
 
 ```{r normalization, message=FALSE, warning=FALSE}
 normalised_lip <- complete_clean %>%
   filter(!is.na(intensity), pipeline == "LiP")%>%
   group_by(experiment, sequence)%>%
-  mutate(sum_intensity = log2(sum(intensity)))%>%
+  mutate(sum_intensity = sum(intensity))%>%
   group_by(experiment)%>%
   distinct(sum_intensity, sequence)%>%
   mutate(median_intensity = median(sum_intensity))%>%
@@ -1101,12 +1100,13 @@ normalised_lip <- complete_clean %>%
   group_by(experiment)%>%
   mutate(normalised_intensity = (sum_intensity/median_intensity)*total_median_intensity)%>%
   right_join(complete_clean%>%filter(pipeline == "LiP"), by = c("experiment", "sequence"))%>%
-  select(-median_intensity, -total_median_intensity)
+  select(-median_intensity, -total_median_intensity)%>%
+  mutate(normalised_intensity_log2 = log2(normalised_intensity))
 
 normalised_trypsin <- complete_clean %>%
   filter(!is.na(intensity), pipeline == "Trypsin Digest")%>%
   group_by(experiment, sequence)%>%
-  mutate(sum_intensity = log2(sum(intensity)))%>%
+  mutate(sum_intensity = sum(intensity))%>%
   group_by(experiment)%>%
   distinct(sum_intensity, sequence)%>%
   mutate(median_intensity = median(sum_intensity))%>%
@@ -1115,7 +1115,8 @@ normalised_trypsin <- complete_clean %>%
   group_by(experiment)%>%
   mutate(normalised_intensity = (sum_intensity/median_intensity)*total_median_intensity)%>%
   right_join(complete_clean%>%filter(pipeline == "Trypsin Digest"), by = c("experiment", "sequence"))%>%
-  select(-median_intensity, -total_median_intensity)
+  select(-median_intensity, -total_median_intensity)%>%
+  mutate(normalised_intensity_log2 = log2(normalised_intensity))
 
 normalised <- bind_rows(normalised_lip, normalised_trypsin)
 
@@ -1125,7 +1126,8 @@ normalised %>%
   filter(!is.na(normalised_intensity))%>%
   ggplot(aes(paste(str_replace_all(as.character(experiment), fixed("_"), " ")), normalised_intensity))+
   geom_boxplot(fill = "steelblue1")+
-  labs(title = "Median normalised peptide intensity distribution over runs", subtitle = "Excluding decoys, excluding contaminants", x = "Experiment", y = "log2 Intensity")+
+  labs(title = "Median normalised peptide intensity distribution over runs", subtitle = "Excluding decoys, excluding contaminants", x = "Experiment", y = "log10 Intensity")+
+  scale_y_log10()+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
 
@@ -1133,7 +1135,7 @@ RSD_lip_normalised <- normalised %>%
   filter(!is.na(normalised_intensity), pipeline == "LiP")%>%
   group_by(experiment)%>%
   summarize(median = median(normalised_intensity))%>%
-  mutate(RSD_median = sqrt(2^(log(2)*sd(median)^2)-1)*100, mean_median = mean(median), sd_median = sd(median))
+  mutate(RSD_median = sd(median)/mean(median)*100, mean_median = mean(median), sd_median = sd(median))
 
 if(nrow(RSD_lip_normalised) == 0){RSD_lip_normalised[1, ] <- NA}
 
@@ -1141,7 +1143,7 @@ RSD_trypsin_normalised <- normalised %>%
   filter(!is.na(normalised_intensity), pipeline == "Trypsin Digest")%>%
   group_by(experiment)%>%
   summarize(median = median(normalised_intensity))%>%
-  mutate(RSD_median = sqrt(2^(log(2)*sd(median)^2)-1)*100, mean_median = mean(median), sd_median = sd(median))
+ mutate(RSD_median = sd(median)/mean(median)*100, mean_median = mean(median), sd_median = sd(median))
 
 if(nrow(RSD_trypsin_normalised) == 0){RSD_trypsin_normalised[1, ] <- NA}
 ```
@@ -1192,7 +1194,7 @@ theme_bw()
 
 ## Correlation normalised samples 
 
-Check the correlation of samples based on their peptide intensities. Tryptic digests should not show any clustering based on replicate groups. LiP samples can show slight clustering into replicate groups depending on the extend of the effect caused by the treatment.
+Check the correlation of samples based on their peptide intensities. 
 
 ```{r correlation_normalization, fig.width=(6+(n_samples*0.25)), fig.height=(6+(n_samples*0.25)), fig.align = "center"}
 correlation_normalised <- normalised %>% 
