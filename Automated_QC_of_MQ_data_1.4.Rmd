@@ -501,13 +501,15 @@ ggplotly(peak_width)
 The number of identified peptides over retention time. Including MBR. Bindwidth is 1 minute.
 
 ```{r IDs_over_RT}
-complete %>%
+id_over_RT <- complete %>%
   select(experiment, retention_time)%>%
   mutate(count = 1)%>%
   ggplot(aes(retention_time, count))+
   geom_line(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, stat = "summary_bin", fun.y = sum, binwidth = 1)+
     labs(title = "Peptide identifications over retention time", subtitle = "Including decoys, including contaminants", x = "Retention time [min]", y = "ID count per minute", color = "Experiment")+
   theme_bw()
+
+ggplotly(id_over_RT)
 ```
 
 ## TopN over retention time
@@ -524,12 +526,13 @@ topn_rt <- msmsscans %>%
   group_by(experiment, binRT)%>%
   mutate(median_topN = median(topN))
 
-topn_rt%>%
+topn_rt_plot <- topn_rt%>%
   ggplot(aes(binRT, median_topN))+
   geom_line(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, )+
     labs(title = "TopN over retention time", x = "Retention time [min]", y = "TopN [median per 2 min RT bin]", color = "Experiment")+
   theme_bw()
   
+ggplotly(topn_rt_plot)
 ```
 
 ## TopN frequencies
@@ -756,7 +759,7 @@ print("No Match between runs was carried out by MaxQuant")
 ```
 
 ```{r MBR_inferred, eval=MBR}
-complete %>%
+MBR_inferred <- complete %>%
   select(experiment, type)%>%
   group_by(experiment)%>%
   mutate(n = n())%>%
@@ -770,7 +773,8 @@ complete %>%
   labs(title = "Peptides inferred by MBR", subtitle = "Including decoys, including contaminants", x = "Number of transfered ID's", y = "Gain on top of genuine ID's [%]", color = "Experiment")+
   expand_limits(x = 0, y = 0)+
   theme_bw()
-  
+
+ggplotly(MBR_inferred)
 ```
 
 
