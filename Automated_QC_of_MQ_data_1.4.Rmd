@@ -957,15 +957,18 @@ paste("No LiP sample was included in this experiment")
 cv_peptide_lip <- complete_clean %>%
   filter(!is.na(intensity), pipeline == "LiP")%>%
   mutate(replicate_group = as.factor(replicate_group))%>%
-  group_by(modified_sequence)%>%
+  group_by(modified_sequence, charge)%>%
   mutate(cv_peptide = sd(intensity)/mean(intensity))%>%
-  group_by(modified_sequence, replicate_group)%>%
+  group_by(modified_sequence, charge, experiment)%>%
+  mutate(intensity = sum(intensity))%>%
+  ungroup()%>%
+  group_by(modified_sequence, charge, replicate_group)%>%
+  distinct(modified_sequence, intensity, cv_peptide, replicate_group)%>%
   mutate(cv_peptide_replicate = sd(intensity)/mean(intensity))%>%
   ungroup()%>%
-  filter(!is.na(cv_peptide))%>%
-  filter(!is.na(cv_peptide_replicate))%>%
   select(modified_sequence, cv_peptide, cv_peptide_replicate, replicate_group)%>%
   gather(type, cv, -modified_sequence, -replicate_group)%>%
+  filter(!is.na(cv))%>%
   mutate(type = as.factor(if_else(type == 'cv_peptide_replicate', as.character(replicate_group), "combined")))%>%
   distinct(modified_sequence, cv, type)%>%
   group_by(type)%>%
@@ -1001,15 +1004,18 @@ paste("No solely tryptic sample was included in this experiment.")
 cv_peptide_trypsin <- complete_clean %>%
   filter(!is.na(intensity), pipeline == "Trypsin Digest")%>%
   mutate(replicate_group = as.factor(replicate_group))%>%
-  group_by(modified_sequence)%>%
+  group_by(modified_sequence, charge)%>%
   mutate(cv_peptide = sd(intensity)/mean(intensity))%>%
-  group_by(modified_sequence, replicate_group)%>%
+  group_by(modified_sequence, charge, experiment)%>%
+  mutate(intensity = sum(intensity))%>%
+  ungroup()%>%
+  group_by(modified_sequence, charge, replicate_group)%>%
+  distinct(modified_sequence, intensity, cv_peptide, replicate_group)%>%
   mutate(cv_peptide_replicate = sd(intensity)/mean(intensity))%>%
   ungroup()%>%
-  filter(!is.na(cv_peptide))%>%
-  filter(!is.na(cv_peptide_replicate))%>%
   select(modified_sequence, cv_peptide, cv_peptide_replicate, replicate_group)%>%
   gather(type, cv, -modified_sequence, -replicate_group)%>%
+  filter(!is.na(cv))%>%
   mutate(type = as.factor(if_else(type == 'cv_peptide_replicate', as.character(replicate_group), "combined")))%>%
   distinct(modified_sequence, cv, type)%>%
   group_by(type)%>%
