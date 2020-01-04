@@ -25,7 +25,8 @@ The tidyverse package is mainly used.
 
 **tidyverse:** The tidyverse is an opinionated collection of R packages designed for data science. All packages share an underlying design philosophy, grammar, and data structures.  
 **janitor:** Usefull for making column names more R friendly.  
-**DT:** Data table library to create interactive tables for markdown.  
+**DT:** Data table to create interactive tables for markdown.  
+**data.table:** Package similar to dplyr, faster but less intuitive.  
 **phylotools:** Has read.fasta function to import fasta files to R.  
 **ggrepel:** This package allows the addition of improved labels to ggplot.  
 **pheatmap:** Makes pretty and easy heatmaps.  
@@ -37,6 +38,7 @@ The tidyverse package is mainly used.
 library(tidyverse)
 library(janitor)
 library(DT)
+library(data.table)
 library(ggrepel)
 library(pheatmap)
 library(dendsort)
@@ -76,12 +78,12 @@ fasta <- read.fasta(file.choose("."))%>%clean_names()
 proteome <- fasta %>%
   mutate(uniprot_id = str_extract(seq_name, "\\|.*?\\|")%>% str_extract(.,"(\\w){1,}"))%>%
   select(-seq_name)
-msmsscans <- read.delim("msmsScans.txt") %>% clean_names()
-parameters <- read.delim("parameters.txt") %>% clean_names()
-peptides <- read.delim("peptides.txt") %>% clean_names()
-evidence <- read.delim("evidence.txt") %>% clean_names()
-summary <- read.delim("summary.txt") %>% clean_names()
-map <- read.delim("map.txt") %>% clean_names()
+msmsscans <- fread("msmsScans.txt", na.strings = c("NaN")) %>% clean_names()
+parameters <- fread("parameters.txt", na.strings = c("NaN")) %>% clean_names()
+peptides <- fread("peptides.txt", na.strings = c("NaN")) %>% clean_names()
+evidence <- fread("evidence.txt", na.strings = c("NaN"), colClasses = c(Intensity = "numeric")) %>% clean_names()
+summary <- fread("summary.txt", na.strings = c("NaN")) %>% clean_names()
+map <- fread("map.txt", na.strings = c("NaN")) %>% clean_names()
 ```
 
 ## Description of variables: {.tabset .tabset-pills}
@@ -140,17 +142,17 @@ Here we define which columns we want to keep for the further analysis of the **p
 **ms:** The number of MS spectra recorded in this raw file.  
 **ms_ms:** The number of MS/MS spectra recorded in this raw file.  
 **ms_ms_submitted:** The number of tandem MS spectra submitted for analysis.  
-**ms_ms_identified_2:** The percentage of identified tandem MS spectra.  
+**ms_ms_identified_percent:** The percentage of identified tandem MS spectra.  
 **peptide_sequences_identified:** The total number of unique peptide amino acid sequences identified from the recorded tandem mass spectra.  
 **peaks:** The total number of peaks detected in the full scans.  
 **peaks_sequenced:** The total number of peaks sequenced by tandem MS.  
-**peaks_sequenced_2:** The percentage of peaks sequenced by tandem MS.  
+**peaks_sequenced_percent:** The percentage of peaks sequenced by tandem MS.  
 **peaks_repeatedly_sequenced:** The total number of peaks repeatedly sequenced (i.e. 1 or more times) by tandem MS.  
-**peaks_repeatedly_sequenced_2:** The percentage of peaks repeatedly sequenced (i.e. 1 or more times) by tandem MS.  
+**peaks_repeatedly_sequenced_percent:** The percentage of peaks repeatedly sequenced (i.e. 1 or more times) by tandem MS.  
 **isotope_patterns:** The total number of detected isotope patterns.  
 **isotope_patterns_sequenced:** The total number of isotope patterns sequenced by tandem MS.  
 **isotope_patterns_repeatedly_sequenced:** The total number of isotope patterns repeatedly sequenced (i.e. 1 or more times) by tandem MS.  
-**isotope_patterns_repeatedly_sequenced_2:** The percentage of isotope patterns repeatedly sequenced (i.e. 1 or more times) by tandem MS.  
+**isotope_patterns_repeatedly_sequenced_percent:** The percentage of isotope patterns repeatedly sequenced (i.e. 1 or more times) by tandem MS.  
 **av_absolute_mass_deviation_ppm:**The average absolute mass deviation found comparing to the identification mass in parts per million. Only including MUILTI-MSMS points.  
 **mass_standard_deviation_ppm:** The standard deviation of the mass deviation found comparing to the identification mass in parts per million. Only including MUILTI-MSMS points.  
 
@@ -162,7 +164,7 @@ columns_evidence <- c("sequence", "modified_sequence", "modifications", "length"
 
 columns_peptides <- c("sequence", "n_term_cleavage_window", "c_term_cleavage_window", "amino_acid_before", "first_amino_acid", "last_amino_acid", "amino_acid_after", "h_count", "c_count", "d_count", "e_count", "start_position", "end_position")
 
-columns_summary <- c("experiment", "ms", "ms_ms", "ms_ms_submitted", "ms_ms_identified", "ms_ms_identified_2", "peptide_sequences_identified", "peaks", "peaks_sequenced", "peaks_sequenced_2", "peaks_repeatedly_sequenced", "peaks_repeatedly_sequenced_2", "isotope_patterns", "isotope_patterns_sequenced", "isotope_patterns_repeatedly_sequenced", "isotope_patterns_repeatedly_sequenced_2", "av_absolute_mass_deviation_ppm", "mass_standard_deviation_ppm")
+columns_summary <- c("experiment", "ms", "ms_ms", "ms_ms_submitted", "ms_ms_identified", "ms_ms_identified_percent", "peptide_sequences_identified", "peaks", "peaks_sequenced", "peaks_sequenced_percent", "peaks_repeatedly_sequenced", "peaks_repeatedly_sequenced_percent", "isotope_patterns", "isotope_patterns_sequenced", "isotope_patterns_repeatedly_sequenced", "isotope_patterns_repeatedly_sequenced_percent", "av_absolute_mass_deviation_ppm", "mass_standard_deviation_ppm")
 ```
 
 ## Joining datasets 
@@ -246,11 +248,11 @@ Plot for each paramter for easier visual identification of differences.
 
 ```{r summary_plot, fig.height = (50/n_cols), fig.width = (10+(n_samples*0.2)), fig.align = "center"}
 
-factor_levels_summary <- str_replace_all(str_replace_all(str_replace_all(as.character(columns_summary), fixed("_"), " "), fixed("2"), "[%]"), fixed("ppm"), "[ppm]")
+factor_levels_summary <- str_replace_all(str_replace_all(str_replace_all(as.character(columns_summary), fixed("_"), " "), fixed("percent"), "[%]"), fixed("ppm"), "[ppm]")
 
 sample_summary %>%
   gather(title, value, -experiment)%>%
-  mutate(title = str_replace_all(str_replace_all(str_replace_all(as.character(title), fixed("_"), " "), fixed("2"), "[%]"), fixed("ppm"), "[ppm]"))%>%
+  mutate(title = str_replace_all(str_replace_all(str_replace_all(as.character(title), fixed("_"), " "), fixed("percent"), "[%]"), fixed("ppm"), "[ppm]"))%>%
   mutate(title = factor(title, levels = factor_levels_summary))%>%
   ggplot(aes(paste(str_to_title(str_replace_all(as.character(experiment), fixed("_"), " "))), value))+
   geom_col(fill = "steelblue1", col ='black')+
@@ -1220,7 +1222,7 @@ pheatmap()
 ```
 
 ```{r export}
-write.table(normalised, "complete_normalised.txt", quote = FALSE, sep = "\t", row.names = FALSE)
+fwrite(normalised, "complete_normalised2.txt", quote = FALSE, sep = "\t", row.names = FALSE, na = "NA")
 ```
 
 
