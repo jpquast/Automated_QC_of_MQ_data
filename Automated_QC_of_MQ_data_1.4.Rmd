@@ -1222,7 +1222,7 @@ pheatmap()
 ```
 
 ```{r export}
-fwrite(normalised, "complete_normalised2.txt", quote = FALSE, sep = "\t", row.names = FALSE, na = "NA")
+fwrite(normalised, "complete_normalised.txt", quote = FALSE, sep = "\t", row.names = FALSE, na = "NA")
 ```
 
 
