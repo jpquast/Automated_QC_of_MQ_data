@@ -178,8 +178,10 @@ The relevant variables from the **summary** dataset are selected and stored in *
 complete <- evidence %>%
   select(columns_evidence, one_of("fraction"))%>%
   left_join((select(peptides, columns_peptides)), by = "sequence") %>%
-  #mutate(experiment = factor(str_to_lower(experiment)))%>%
-  left_join(map, by = "experiment")
+  left_join(map, by = "experiment")%>%
+  mutate(N_term_tryp = ifelse(amino_acid_before == "-" | amino_acid_before == "K" | amino_acid_before == "R", TRUE, FALSE ))%>%
+  mutate(C_term_tryp = ifelse(last_amino_acid == "K" | last_amino_acid == "R" | last_amino_acid == "-", TRUE, FALSE ))%>%
+  mutate(pep_type = fct_relevel(factor(ifelse(N_term_tryp + C_term_tryp == 2, "Fully-tryptic", ifelse(N_term_tryp + C_term_tryp == 1,"Semi-tryptic", "Non-tryptic"))), "Non-tryptic", after = Inf))
 
 sample_summary <- summary %>%
   select(columns_summary)%>%
@@ -871,9 +873,6 @@ cum_peptides%>%
 ```{r semi_tryptic, , fig.width=(6+(n_samples*0.4)), fig.height=6, fig.align = "center"}
 
 semi_tryptic <- complete_clean %>%
-  mutate(N_term_tryp = ifelse(amino_acid_before == "-" | amino_acid_before == "K" | amino_acid_before == "R", TRUE, FALSE ))%>%
-  mutate(C_term_tryp = ifelse(last_amino_acid == "K" | last_amino_acid == "R" | last_amino_acid == "-", TRUE, FALSE ))%>%
-  mutate(pep_type = fct_relevel(factor(ifelse(N_term_tryp + C_term_tryp == 2, "Fully-tryptic", ifelse(N_term_tryp + C_term_tryp == 1,"Semi-tryptic", "Non-tryptic"))), "Non-tryptic", after = Inf))%>%
   count(experiment, pep_type, name = "count")%>%
   group_by(experiment)%>%
   mutate(relative = count/sum(count)*100)
