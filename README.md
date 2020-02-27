@@ -6,6 +6,13 @@ Some concepts and ideas are taken from the [PTXQC package](https://pubs.acs.org/
 
 The scriped is written in the RMarkdown format. It generates an HTML report when executed by clicking the Knit button in RStudio. 
 
+The github repository contains the following useful files: 
+
+* The script.
+* An example for the output in HTML format.
+* An example for the map file. 
+* The yeast and human proteome from Uniprot. 
+
 ## Before you get started
 
 It is important to specify certain run parameters in MaxQuant for this script to run properly. 
@@ -51,20 +58,20 @@ Once you have installed all missing packages you can proceed to making a map fil
 
 ### Making a map.txt file
 
-This file containing information about the experiment and is gnerated by the user. It is important that the column names are exactly like the specified names. Columns that are absolutely required are marked with a /*. 
+This file containing information about the experiment and is gnerated by the user. It is important that the column names are exactly like the specified names. Columns that are absolutely required are marked with a \*. 
 
 Structure of the `map.txt` file:
 
-* **sample_number/*:** 1, 2, 3...
+* **sample_number\*:** 1, 2, 3...
 * **strain:** E. coli (K12)... 
 * **biological_replicate:** 1, 2, 3...
-* **technical_replicate/*:** 1, 2, 3..
-* **pipline/*:** LiP, Trypsin Digest (make sure to call it exactly like this)
+* **technical_replicate\*:** 1, 2, 3..
+* **pipline\*:** LiP, Trypsin Digest (make sure to call it exactly like this)
 * **ms_running_order:** 1, 2, 3...
 * **vial_position:** A1, A2, A3...
 * **filename:** Name of the file that was the input for MaxQuant.Take from summary file.
-* **experiment/*:** Abbreviated name of the sample. Specified in MaxQuant as "Experiment". Take from summary file. E.g.: Control_01, Control_02, Treated_01... 
-* **replicate_group/*:** One name for each replicate group. control, control, control, control, treated, treated, treated, treated...
+* **experiment\*:** Abbreviated name of the sample. Specified in MaxQuant as "Experiment". Take from summary file. E.g.: Control_01, Control_02, Treated_01... 
+* **replicate_group\*:** One name for each replicate group. control, control, control, control, treated, treated, treated, treated...
 
 ### Setting up the folder
 
@@ -81,7 +88,7 @@ Copy your `map.txt` file into this folder. Then copy the R script `Automated_QC_
 
 You do not need to also add the proteome fasta file into the same folder but you should know where it is. You will be promted to choose the file once you start running the script.
 
-`*_proteome.fasta`: File containing informaition about every protein in the desired proteom. Contains Uniprot ID's and sequence.  
+`*_proteome.fasta`: File containing informaition about every protein in the desired proteome. Contains Uniprot ID's and sequence.  
 
 **Note:** This does not seem to work on MacOS due to a different behaviour of Rmarkdown documents. You can still manually run `file.choose()` and select the fasta file. The path will be the output. In line 79, replace `file.choose(".")` with that path. 
 
