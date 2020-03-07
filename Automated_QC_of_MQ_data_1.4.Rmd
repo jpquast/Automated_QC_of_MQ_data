@@ -580,6 +580,8 @@ Each group has to contain the reference file, which correstponds to the first fi
 
 If the alignment worked not very well and there are a lot of values outside of the 0.7 minute border and increase of the default alignment window in MaxQuant could yield a better alignment.
 
+The order in which LC-MS runs are aligned is determined by hierarchical clustering, thereby avoiding reliance on a single master run. The terminal branches of the tree from the hierarchical clustering typically connect LC-MS runs of the same or neighboring fractions or replicate runs, since they are most similar. These cases are aligned first. Moving along the tree structure, increasingly dissimilar runs are integrated. The calibration functions that are needed to completely align LC-MS runs are usually timedependent in a non-linear way. Every pair-wise alignment step is performed by two dimensional Gaussian kernel smoothing of the mass matches between the two runs. Following the ridge of the highest density region determines the recalibration function. At each tree node the resulting recalibration function is applied to one of the two subtrees, while the other is left unaltered. This description was taken from the [MaxLFQ paper](https://www.mcponline.org/content/mcprot/early/2014/06/19/mcp.M113.031591.full.pdf). This is simplified here by just comparing all runs to the first run.
+
 ```{r no_MBR_1, eval=!MBR}
 print("No Match between runs was carried out by MaxQuant")
 ```
@@ -1138,9 +1140,18 @@ normalised_lip <- complete_clean %>%
   mutate(median_intensity = median(unique(median_run_intensity), na.rm = TRUE))%>%
   group_by(experiment)%>%
   mutate(normalised_intensity = (sum_intensity/median_run_intensity)*median_intensity)%>%
+  mutate(normalised_intensity_log2 = log2(normalised_intensity))%>%
   right_join(complete_clean%>%filter(pipeline == "LiP"), by = c("experiment", "sequence"))%>%
   select(-median_run_intensity, -median_intensity)%>%
-  mutate(normalised_intensity_log2 = log2(normalised_intensity))
+  group_by(experiment)%>%
+  mutate(median_run_intensity = median(intensity, na.rm = TRUE))%>%
+  ungroup()%>%
+  mutate(median_intensity = median(unique(median_run_intensity), na.rm = TRUE))%>%
+  group_by(experiment)%>%
+  mutate(normalised_precursor_intensity = (intensity/median_run_intensity)*median_intensity)%>%
+  select(-median_run_intensity, -median_intensity)%>%
+  mutate(normalised_precursor_intensity_log2 = log2(normalised_precursor_intensity))
+  
 
 normalised_trypsin <- complete_clean %>%
   filter(!is.na(intensity), pipeline == "Trypsin Digest")%>%
@@ -1153,9 +1164,17 @@ normalised_trypsin <- complete_clean %>%
   mutate(median_intensity = median(unique(median_run_intensity), na.rm = TRUE))%>%
   group_by(experiment)%>%
   mutate(normalised_intensity = (sum_intensity/median_run_intensity)*median_intensity)%>%
+  mutate(normalised_intensity_log2 = log2(normalised_intensity))%>%
   right_join(complete_clean%>%filter(pipeline == "Trypsin Digest"), by = c("experiment", "sequence"))%>%
   select(-median_run_intensity, -median_intensity)%>%
-  mutate(normalised_intensity_log2 = log2(normalised_intensity))
+  group_by(experiment)%>%
+  mutate(median_run_intensity = median(intensity, na.rm = TRUE))%>%
+  ungroup()%>%
+  mutate(median_intensity = median(unique(median_run_intensity), na.rm = TRUE))%>%
+  group_by(experiment)%>%
+  mutate(normalised_precursor_intensity = (intensity/median_run_intensity)*median_intensity)%>%
+  select(-median_run_intensity, -median_intensity)%>%
+  mutate(normalised_precursor_intensity_log2 = log2(normalised_precursor_intensity))
 
 normalised <- bind_rows(normalised_lip, normalised_trypsin)
 
@@ -1260,5 +1279,121 @@ pheatmap()
 fwrite(normalised, "complete_normalised.txt", quote = FALSE, sep = "\t", row.names = FALSE, na = "NA")
 ```
 
+```{r}
+split_tibble <- function(tibble, col = 'col'){
+  tibble %>% split(., .[,col])
+}
 
+transform_list <- function(x){
+  x%>%
+  select(-leading_razor_protein)%>%
+  pivot_wider(names_from = experiment, values_from = normalised_precursor_intensity_log2)%>%
+  column_to_rownames("precursor")%>%
+  as.matrix()
+}
+
+normalised_list <- normalised %>%
+  ungroup()%>%
+  filter(type != "MSMS")%>%
+  unite("precursor", modified_sequence, charge, sep = "")%>%
+  select(experiment, precursor, normalised_precursor_intensity)%>%
+  group_by(experiment, precursor)%>%
+  summarize(normalised_precursor_intensity_log2 = log2(sum(normalised_precursor_intensity)))%>%
+  ungroup()%>%
+  complete(experiment, precursor)%>%
+  left_join(normalised%>%ungroup()%>%unite("precursor", modified_sequence, charge, sep = "")%>%distinct(precursor, leading_razor_protein), by = "precursor")%>%
+  split_tibble("leading_razor_protein")%>%
+  map(transform_list)
+
+
+maxlfq <- normalised_list %>%
+  map(iq::maxLFQ)%>%
+  modify_depth(.depth = 1, .f = pluck, "estimate")
+
+protint <- normalised_list %>%
+  map(maxlfq, ~data.frame(rbind(.x, .y)))
+
+maxlfq <- iq::maxLFQ(normalised_list$P0DPI2)$estimate
+protint <- rbind(normalised_list$`P0DPI2`, `MaxLFQ by iq` = maxlfq)%>%
+  as_tibble(rownames = NA)%>%
+  rownames_to_column("precursor")%>%
+  pivot_longer(-precursor, names_to = "experiment", values_to = "intensity")
+
+
+protint%>%
+  drop_na()%>%
+ggplot(aes(experiment, intensity, group = precursor, col = precursor))+
+  geom_point()+
+  geom_line()+
+  scale_color_manual(values=c(rep("gray", nrow(normalised_list$`P0DPI2`)), "green"))+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, hjust =1))
+
+```
+
+
+
+```{r}
+dda <- read.delim("proteinGroups.txt")
+dda <- subset(dda, Reverse == "")    # remove reversed entries
+rownames(dda) <- dda[,"Protein.IDs"] # use protein group ids as rownames
+lfq <- grep("^LFQ", colnames(dda))
+dda_log2 <- log2(dda[, lfq])
+dda_log2[dda_log2 == -Inf] <- NA
+
+colnames(dda_log2) <- sprintf("C%02d", 1:24)
+
+
+evidence <- read.delim("evidence.txt", stringsAsFactors = FALSE)
+rownames(evidence) <- evidence[, "id"]
+
+# median normalization
+ex <- unique(evidence$Experiment)
+ex_median <- rep(NA, length(ex))
+names(ex_median) <- ex
+for (i in ex) {
+    tmp <- subset(evidence, Experiment == i)
+    ex_median[i] <- median(tmp[,"Intensity"], na.rm = TRUE)
+}
+f <- mean(ex_median)/ex_median
+evidence[, "Intensity"] <- evidence[, "Intensity"] * f[evidence[, "Experiment"]]
+
+# create a protein list
+p_list <- list()
+
+for (i in 1:nrow(dda)) {
+    tmp <- unlist(strsplit(as.character(dda[i, "Evidence.IDs"]), ";"))
+    a <- evidence[tmp,]
+    b <- data.frame(cn = a[, "Experiment"], 
+                    rn = as.factor(paste(a[, "Modified.sequence"], a[, "Charge"], sep="_")), 
+                    quant = a[, "Intensity"])
+    b <- b[!is.na(b$quant),]
+    m <- matrix(NA, nrow = nlevels(b$rn), ncol = length(ex), 
+                dimnames = list(levels(b$rn), ex))
+  
+    if (nrow(b) > 0) {
+        for (j in 1:nrow(b)) {
+            rn <- as.character(b$rn[j])
+            cn <- as.character(b$cn[j])
+            if (is.na(m[rn, cn])) {
+                m[rn, cn] <- b$quant[j]
+            } else {
+                m[rn, cn] <- m[rn, cn] + b$quant[j]
+            }
+        }
+        p_list[[rownames(dda)[i]]] <- log2(m)
+    } else {
+        p_list[[rownames(dda)[i]]] <- NA
+    }
+}
+
+w1 <- iq::maxLFQ(p_list$`P0DPI2;A0A0B4J2D5`)$estimate
+
+tmp <- rbind(p_list$`P0DPI2;A0A0B4J2D5`, `MaxLfQ by iq` = w1)
+
+
+iq::plot_protein(tmp,
+                 main = "P0DPI2;A0A0B4J2D5", cex = 0.5, split = 0.65, 
+                 col = c(rep("gray", nrow(p_list$`P0DPI2;A0A0B4J2D5`)), "green", "blue"))  
+```
 
