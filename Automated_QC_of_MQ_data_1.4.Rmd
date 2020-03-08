@@ -1275,11 +1275,11 @@ pheatmap()
 
 ```
 
-```{r export}
-fwrite(normalised, "complete_normalised.txt", quote = FALSE, sep = "\t", row.names = FALSE, na = "NA")
-```
+# Protein intensity computation
 
-```{r}
+The protein intensity is computed using the MaxLFQ algorythm implemented into R by the [iq package](https://watermark.silverchair.com/btz961.pdf?token=AQECAHi208BE49Ooan9kkhW_Ercy7Dm3ZL_9Cf3qfKAc485ysgAAAp8wggKbBgkqhkiG9w0BBwagggKMMIICiAIBADCCAoEGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMWXpfsArbcjAjXXGRAgEQgIICUgve35lUkwBakkwVpzx9KXnwkqn0Iw0ucOo5t3VOi9q1dJRrE2hzZJKJ8OCbh1SKPIMFNV_UD9bQjZwj2Sock2z8exjFiXGWOTi3IUyYFUCTJEy8UnTu8RVYKLKd1Wxw3vDVhOsA51YwQU-T6ggO2G7P0_4BIP6mF2TXrVIaa1t_Rp0Zju43J16ggTDATPhsLXwZUlCPMjh_gBK83a20N5jVECkMNPmm9QWs9gWvBcucH-VRDRwF4TNmgRZM1K5wJ5f1rHiObcksd7dUgSPiTIR-YIqIkFyapZOA048mwdnTBXi2xG95hY0DfVIr5UIiktLInVW5tfCSBfsQBxezJeL2W6TERd6Tn4sK8x_hGfFpJB7zUfyqUAPVRKj8MemRFWOk_Z_PqePmvRxLazTQQhDOgtmdgwNfaZYcT8YW8uVOqhJuFOhbd7ECDDy_qwDoJQpARTcs2i-jTzEVDlfn34H8E5Wfo5nu5Wpa2jTG3fGIv4l4yq9fFhYYd1StO59qXwnd0lRynvF9WnLu3Q1lSHdgfmHlvs9pYQ2vFvqanrsF85NBdAQnKzJE_dq7DKkeRxwLSl7ELPHbUbD6A1CgzvHMcx7A3LpwS8rDbi1zWNJjhW2ujw0ZYM7RgrfDxf61j57ww8fag2ejdzGugV7VLbVOYLaq1CeiGvB7qvWnCriKrLZhlKDef0b9pDVi9V6zNpWzjlh0GVxOOXRNs0I8IYYHD7z5Ei2QsqJz8eJRirBkNaq73G6QIZl8lqsdIjOZGlAEm3Rn7oBnv60DQThsNs4nWA). It is based on [MaxLFQ](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4159666/pdf/zjw2513.pdf) that uses peptide ration information to calculate protein abundances. It can be found as a feature in Maxquant.
+
+```{r maxlfq}
 split_tibble <- function(tibble, col = 'col'){
   tibble %>% split(., .[,col])
 }
@@ -1320,86 +1320,24 @@ protint <- normalised_list %>%
   map(rownames_to_column, "precursor")%>%
   map(pivot_longer, -precursor, names_to = "experiment", values_to = "intensity")
 
+maxlfq_tibble <- maxlfq %>%
+  map(pivot_longer, everything(), names_to = "experiment", values_to = "protein_intensity_log2")%>%
+    map_dfr(bind_rows, .id = "leading_razor_protein")
+
+complete_normalised <- normalised %>%
+  left_join(maxlfq_tibble, by = c("experiment", "leading_razor_protein"))
 
 protint[["A0MZ66"]]%>%
   drop_na()%>%
 ggplot(aes(experiment, intensity, group = precursor, col = precursor))+
   geom_point()+
-  geom_line()+
+  geom_line(size = 1)+
   labs(title = names(protint["A0MZ66"]), x = "Experiment", y = "Intensity [log2]")+
   scale_color_manual(values=c(rep("gray", nrow(normalised_list[["A0MZ66"]])), "green"))+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
-
 ```
 
-
-
-```{r}
-dda <- read.delim("proteinGroups.txt")
-dda <- subset(dda, Reverse == "")    # remove reversed entries
-rownames(dda) <- dda[,"Protein.IDs"] # use protein group ids as rownames
-lfq <- grep("^LFQ", colnames(dda))
-dda_log2 <- log2(dda[, lfq])
-dda_log2[dda_log2 == -Inf] <- NA
-
-colnames(dda_log2) <- sprintf("C%02d", 1:16)
-
-
-evidence <- read.delim("evidence.txt", stringsAsFactors = FALSE)
-rownames(evidence) <- evidence[, "id"]
-
-# median normalization
-ex <- unique(evidence$Experiment)
-ex_median <- rep(NA, length(ex))
-names(ex_median) <- ex
-for (i in ex) {
-    tmp <- subset(evidence, Experiment == i)
-    ex_median[i] <- median(tmp[,"Intensity"], na.rm = TRUE)
-}
-f <- mean(ex_median)/ex_median
-evidence[, "Intensity"] <- evidence[, "Intensity"] * f[evidence[, "Experiment"]]
-
-# create a protein list
-p_list <- list()
-
-for (i in 1:nrow(dda)) {
-    tmp <- unlist(strsplit(as.character(dda[i, "Evidence.IDs"]), ";"))
-    a <- evidence[tmp,]
-    b <- data.frame(cn = a[, "Experiment"], 
-                    rn = as.factor(paste(a[, "Modified.sequence"], a[, "Charge"], sep="_")), 
-                    quant = a[, "Intensity"])
-    b <- b[!is.na(b$quant),]
-    m <- matrix(NA, nrow = nlevels(b$rn), ncol = length(ex), 
-                dimnames = list(levels(b$rn), ex))
-  
-    if (nrow(b) > 0) {
-        for (j in 1:nrow(b)) {
-            rn <- as.character(b$rn[j])
-            cn <- as.character(b$cn[j])
-            if (is.na(m[rn, cn])) {
-                m[rn, cn] <- b$quant[j]
-            } else {
-                m[rn, cn] <- m[rn, cn] + b$quant[j]
-            }
-        }
-        p_list[[rownames(dda)[i]]] <- log2(m)
-    } else {
-        p_list[[rownames(dda)[i]]] <- NA
-    }
-}
-
-w1 <- iq::maxLFQ(p_list$`A0MZ66`)$estimate
-
-w2 <- as.numeric(dda_log2["A0MZ66", ])
-w2 <- w2 - mean(w2, na.rm = TRUE) + mean(w1, na.rm = TRUE)
-
-
-tmp <- rbind(p_list$`A0MZ66`, `MaxLfQ by iq` = w1, `MaxLFQ by MaxQuant` = w2)
-
-
-iq::plot_protein(tmp,
-                 main = "A0MZ66", cex = 0.5, split = 0.65, 
-                 col = c(rep("gray", nrow(p_list$`A0MZ66`)), "green", "blue"))  
+```{r export}
+fwrite(complete_normalised, "complete_normalised.txt", quote = FALSE, sep = "\t", row.names = FALSE, na = "NA")
 ```
-
