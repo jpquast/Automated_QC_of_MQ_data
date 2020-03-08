@@ -497,7 +497,7 @@ For every minute of the run, the median peak width is calculated and displayed.
 peak_width <- complete %>%
   select(experiment, retention_time, retention_length)%>%
   ggplot(aes(retention_time, retention_length))+
-  geom_line(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, stat = "summary_bin", fun.y = median, binwidth = 1)+
+  stat_summary_bin(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, geom = "line", binwidth = 1, fun = sum)+
     labs(title = "Median peak width over retention time", subtitle = "Including decoys, including contaminants", x = "Retention time [min]", y = "Median peak width [min]", color = "Experiment")+
   theme_bw()
 ```
@@ -518,7 +518,7 @@ id_over_RT <- complete_clean_contaminants %>%
   select(experiment, retention_time)%>%
   mutate(count = 1)%>%
   ggplot(aes(retention_time, count))+
-  geom_line(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, stat = "summary_bin", fun.y = sum, binwidth = 1)+
+  stat_summary_bin(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, geom = "line", binwidth = 1, fun = sum)+
     labs(title = "Peptide identifications over retention time", subtitle = "Excluding decoys, including contaminants", x = "Retention time [min]", y = "ID count per minute", color = "Experiment")+
   theme_bw()
 
@@ -1292,6 +1292,8 @@ transform_list <- function(x){
   as.matrix()
 }
 
+sample_names <- sort(unique(complete_clean$experiment))
+
 normalised_list <- normalised %>%
   ungroup()%>%
   filter(type != "MSMS")%>%
@@ -1308,24 +1310,24 @@ normalised_list <- normalised %>%
 
 maxlfq <- normalised_list %>%
   map(iq::maxLFQ)%>%
-  modify_depth(.depth = 1, .f = pluck, "estimate")
+  modify_depth(.depth = 1, .f = pluck, "estimate")%>%
+  map(function(x) matrix(x, ncol = length(x), nrow = 1, dimnames = list("MaxLFQ_iq", sample_names)))%>%
+  map(as_tibble, rownames = NA)
 
 protint <- normalised_list %>%
-  map(maxlfq, ~data.frame(rbind(.x, .y)))
-
-maxlfq <- iq::maxLFQ(normalised_list$P0DPI2)$estimate
-protint <- rbind(normalised_list$`P0DPI2`, `MaxLFQ by iq` = maxlfq)%>%
-  as_tibble(rownames = NA)%>%
-  rownames_to_column("precursor")%>%
-  pivot_longer(-precursor, names_to = "experiment", values_to = "intensity")
+  map(as_tibble, rownames = NA)%>%
+  map2(maxlfq, rbind)%>%
+  map(rownames_to_column, "precursor")%>%
+  map(pivot_longer, -precursor, names_to = "experiment", values_to = "intensity")
 
 
-protint%>%
+protint[["A0MZ66"]]%>%
   drop_na()%>%
 ggplot(aes(experiment, intensity, group = precursor, col = precursor))+
   geom_point()+
   geom_line()+
-  scale_color_manual(values=c(rep("gray", nrow(normalised_list$`P0DPI2`)), "green"))+
+  labs(title = names(protint["A0MZ66"]), x = "Experiment", y = "Intensity [log2]")+
+  scale_color_manual(values=c(rep("gray", nrow(normalised_list[["A0MZ66"]])), "green"))+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
 
@@ -1341,7 +1343,7 @@ lfq <- grep("^LFQ", colnames(dda))
 dda_log2 <- log2(dda[, lfq])
 dda_log2[dda_log2 == -Inf] <- NA
 
-colnames(dda_log2) <- sprintf("C%02d", 1:24)
+colnames(dda_log2) <- sprintf("C%02d", 1:16)
 
 
 evidence <- read.delim("evidence.txt", stringsAsFactors = FALSE)
@@ -1387,13 +1389,17 @@ for (i in 1:nrow(dda)) {
     }
 }
 
-w1 <- iq::maxLFQ(p_list$`P0DPI2;A0A0B4J2D5`)$estimate
+w1 <- iq::maxLFQ(p_list$`A0MZ66`)$estimate
 
-tmp <- rbind(p_list$`P0DPI2;A0A0B4J2D5`, `MaxLfQ by iq` = w1)
+w2 <- as.numeric(dda_log2["A0MZ66", ])
+w2 <- w2 - mean(w2, na.rm = TRUE) + mean(w1, na.rm = TRUE)
+
+
+tmp <- rbind(p_list$`A0MZ66`, `MaxLfQ by iq` = w1, `MaxLFQ by MaxQuant` = w2)
 
 
 iq::plot_protein(tmp,
-                 main = "P0DPI2;A0A0B4J2D5", cex = 0.5, split = 0.65, 
-                 col = c(rep("gray", nrow(p_list$`P0DPI2;A0A0B4J2D5`)), "green", "blue"))  
+                 main = "A0MZ66", cex = 0.5, split = 0.65, 
+                 col = c(rep("gray", nrow(p_list$`A0MZ66`)), "green", "blue"))  
 ```
 
