@@ -310,17 +310,15 @@ The relative standard deviation of the median run intensities gives an estimate 
 **Mean of median intensities: `r RSD_trypsin %>% select(mean_median)%>%distinct()%>%as.integer()`**  
 **SD of median intensities: `r RSD_trypsin %>% select(sd_median)%>%distinct()%>%as.integer()`**  
 
-```{r RSD_median_table}
+```{r RSD_median_plot}
+medians_plot <- RSD%>%
+  ggplot(aes(experiment, median, group = 1))+
+  geom_line(size = 1)+
+  labs(title = "Medians of run intensities", x = "Run", y = "Median")+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, hjust =1))
 
-datatable(RSD %>% select(experiment, median), rownames = FALSE, extensions = 'FixedColumns',
-  options = list(
-  dom = 'til',
-  pageLength = 8,
-  lengthMenu = c(4, 8, 16, 32, 50, 100),
-  scrollX = TRUE,
-  fixedColumns = list(leftColumns = 1),
-  scrollCollapse = TRUE
-))
+ggplotly(medians_plot)
 ```
 
 
@@ -497,7 +495,7 @@ For every minute of the run, the median peak width is calculated and displayed.
 peak_width <- complete %>%
   select(experiment, retention_time, retention_length)%>%
   ggplot(aes(retention_time, retention_length))+
-  stat_summary_bin(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, geom = "line", binwidth = 1, fun = sum)+
+  stat_summary_bin(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, geom = "line", binwidth = 1, fun = median)+
     labs(title = "Median peak width over retention time", subtitle = "Including decoys, including contaminants", x = "Retention time [min]", y = "Median peak width [min]", color = "Experiment")+
   theme_bw()
 ```
@@ -1284,7 +1282,9 @@ split_tibble <- function(tibble, col = 'col'){
   tibble %>% split(., .[,col])
 }
 
-transform_list <- function(x){
+transform_list <- function(x, .pb=NULL){
+  if ((!is.null(.pb)) && inherits(.pb, "Progress") && (.pb$i < .pb$n)) .pb$tick()$print()
+  
   x%>%
   select(-leading_razor_protein)%>%
   pivot_wider(names_from = experiment, values_from = normalised_precursor_intensity_log2)%>%
@@ -1293,6 +1293,8 @@ transform_list <- function(x){
 }
 
 sample_names <- sort(unique(complete_clean$experiment))
+
+pb <- progress_estimated(length(unique(normalised$leading_razor_protein)))
 
 normalised_list <- normalised %>%
   ungroup()%>%
