@@ -76,7 +76,7 @@ Structure of the `map.txt` file:
 * **experiment:** Abbreviated name of the sample. Specified in MaxQuant as "Experiment". Take from summary file. E.g.: Control_01, Control_02, Treated_01... 
 * **replicate_group:** One number for each replicate group. control, control, control, control, treated, treated, treated, treated...
 
-```{r importing_data}
+```{r importing_data, warning = FALSE}
 fasta <- read.fasta(file.choose("."))%>%clean_names()
 proteome <- fasta %>%
   mutate(uniprot_id = str_extract(seq_name, "\\|.*?\\|")%>% str_extract(.,"(\\w){1,}"))%>%
@@ -195,6 +195,7 @@ sample_summary <- summary %>%
 ```{r figure_vars}
 # determination of figure size variables. Can be ignored and has nothing to do with analysis
 n_samples <- n_distinct(summary$experiment)-1
+n_conditions <- n_distinct(map$replicate_group)
 n_cols <- if_else(n_samples >16, 1, 2)
 n_cols_topN <- case_when(n_samples/4 <=1 ~ 2, n_samples/4 >1 & n_samples/4 <2 ~ 3, n_samples/4 >=2 ~ 4)
 MBR<- "MULTI-MATCH" %in% complete$type
@@ -312,7 +313,7 @@ The relative standard deviation of the median run intensities gives an estimate 
 
 ```{r RSD_median_plot}
 medians_plot <- RSD%>%
-  ggplot(aes(experiment, median, group = 1))+
+  ggplot(aes(paste(str_replace_all(as.character(experiment), fixed("_"), " ")), median, group = 1))+
   geom_line(size = 1)+
   labs(title = "Medians of run intensities", x = "Run", y = "Median")+
   theme_bw()+
@@ -736,7 +737,7 @@ in_rt_diff <- rt_diff %>%
 
 ```
 
-```{r ID_transfer_quality, fig.width=(10+(n_samples*0.25)), fig.height=6, fig.align = "center", eval=MBR}
+```{r ID_transfer_quality, fig.width=(5+(n_samples*0.25)), fig.height=10, fig.align = "center", eval=MBR}
 ID_transfer <- ID_transfer_single %>%
   left_join(in_rt_diff, by = "experiment")%>%
   mutate(non_single_native = 1 - single_native, non_single_matched = 1 - single_matched, non_single_all = 1 - single_all)%>%
@@ -761,7 +762,7 @@ ID_transfer <- ID_transfer_single %>%
 ID_transfer %>%
   ggplot(aes(paste(str_to_title(str_replace_all(as.character(experiment), fixed("_"), " "))), value, fill = peak_class))+
   geom_col()+
-  facet_wrap(~ transfer_type)+
+  facet_wrap(~ transfer_type, ncol =1)+
   labs(title = "ID Transfer", x = "Experiment", y = "Fraction of 3D-peaks [%]", fill = "Peak type")+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
@@ -838,6 +839,24 @@ peptides_samples%>%
   theme_bw()+
   coord_cartesian(ylim = c(0, (max(peptides_samples$number_of_peptides))+1000))
 
+```
+
+
+```{r n_pep_by_freq, fig.align = "center", fig.height=6, fig.width=(6+(n_samples*0.25)), message=FALSE, warning=FALSE}
+  complete_clean %>%
+  distinct(sequence, experiment)%>%
+  group_by(sequence)%>%
+  mutate(n_samples_peptide = n())%>%
+  group_by(n_samples_peptide, experiment)%>%
+  count(name = "frequency")%>%
+  ungroup()%>%
+  mutate(n_samples_peptide = as.factor(n_samples_peptide))%>%
+  ggplot(aes(experiment, frequency, fill = n_samples_peptide))+
+  geom_bar(stat = 'identity', col = "black") +
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, hjust =1))+
+  scale_fill_manual(values = scales::seq_gradient_pal("dodgerblue4", "steelblue1", "Lab")(seq(0,1,length.out=n_distinct(complete_clean$experiment))))+
+  labs(title = "Number of peptide by frequency per sample", x = "Sample", y = "Number of Peptides", fill = "Frequency")
 ```
 
 
@@ -945,7 +964,7 @@ complete_clean %>%
 
 ## Peptide intensity distribution before normalization
 
-```{r intensities}
+```{r intensities, warning = FALSE}
 intensity_plot <- complete_clean %>%
   filter(!is.na(intensity))%>%
   select(sequence, intensity, experiment)%>%
@@ -956,7 +975,7 @@ intensity_plot <- complete_clean %>%
   scale_y_continuous(trans = scales::log2_trans(),
     breaks = scales::trans_breaks("log2", function(x) 2^x),
     labels = scales::trans_format("log2", scales::math_format(2^.x)))+
-  labs(title = "Peptide intensity distribution over runs", subtitle = "Excluding decoys, excluding contaminants", x = "Experiment", y = "log10 Intensity")+
+  labs(title = "Peptide intensity distribution over runs", subtitle = "Excluding decoys, excluding contaminants", x = "Experiment", y = "log2 Intensity")+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
 
@@ -976,7 +995,7 @@ The CV is expected to be smaller for conditions than for all samples combined. I
 paste("No LiP sample was included in this experiment")
 ```
 
-```{r CV_peptide_lip, eval=lip}
+```{r CV_peptide_lip, fig.height = 4+((n_conditions+1)*0.35), fig.width = 10, fig.align = "center", eval=lip}
 cv_peptide_lip <- complete_clean %>%
   filter(!is.na(intensity), pipeline == "LiP")%>%
   mutate(replicate_group = as.factor(replicate_group))%>%
@@ -1023,7 +1042,7 @@ paste("No solely tryptic sample was included in this experiment.")
 ```
 
 
-```{r CV_peptide_trypsin, eval=tryptic}
+```{r CV_peptide_trypsin, fig.height = 4+((n_conditions+1)*0.35), fig.width = 10, fig.align = "center", eval=tryptic}
 cv_peptide_trypsin <- complete_clean %>%
   filter(!is.na(intensity), pipeline == "Trypsin Digest")%>%
   mutate(replicate_group = as.factor(replicate_group))%>%
@@ -1273,7 +1292,7 @@ pheatmap()
 
 ```
 
-# Protein intensity computation
+# Protein intensity calculation
 
 The protein intensity is computed using the MaxLFQ algorythm implemented into R by the [iq package](https://watermark.silverchair.com/btz961.pdf?token=AQECAHi208BE49Ooan9kkhW_Ercy7Dm3ZL_9Cf3qfKAc485ysgAAAp8wggKbBgkqhkiG9w0BBwagggKMMIICiAIBADCCAoEGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMWXpfsArbcjAjXXGRAgEQgIICUgve35lUkwBakkwVpzx9KXnwkqn0Iw0ucOo5t3VOi9q1dJRrE2hzZJKJ8OCbh1SKPIMFNV_UD9bQjZwj2Sock2z8exjFiXGWOTi3IUyYFUCTJEy8UnTu8RVYKLKd1Wxw3vDVhOsA51YwQU-T6ggO2G7P0_4BIP6mF2TXrVIaa1t_Rp0Zju43J16ggTDATPhsLXwZUlCPMjh_gBK83a20N5jVECkMNPmm9QWs9gWvBcucH-VRDRwF4TNmgRZM1K5wJ5f1rHiObcksd7dUgSPiTIR-YIqIkFyapZOA048mwdnTBXi2xG95hY0DfVIr5UIiktLInVW5tfCSBfsQBxezJeL2W6TERd6Tn4sK8x_hGfFpJB7zUfyqUAPVRKj8MemRFWOk_Z_PqePmvRxLazTQQhDOgtmdgwNfaZYcT8YW8uVOqhJuFOhbd7ECDDy_qwDoJQpARTcs2i-jTzEVDlfn34H8E5Wfo5nu5Wpa2jTG3fGIv4l4yq9fFhYYd1StO59qXwnd0lRynvF9WnLu3Q1lSHdgfmHlvs9pYQ2vFvqanrsF85NBdAQnKzJE_dq7DKkeRxwLSl7ELPHbUbD6A1CgzvHMcx7A3LpwS8rDbi1zWNJjhW2ujw0ZYM7RgrfDxf61j57ww8fag2ejdzGugV7VLbVOYLaq1CeiGvB7qvWnCriKrLZhlKDef0b9pDVi9V6zNpWzjlh0GVxOOXRNs0I8IYYHD7z5Ei2QsqJz8eJRirBkNaq73G6QIZl8lqsdIjOZGlAEm3Rn7oBnv60DQThsNs4nWA). It is based on [MaxLFQ](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4159666/pdf/zjw2513.pdf) that uses peptide ration information to calculate protein abundances. It can be found as a feature in Maxquant.
 
