@@ -45,11 +45,13 @@ The required packages include:
 * **dendsort:** Sort the dendrogram created for heatmap.  
 * **plotly:** Creates interactive figures from ggplot.  
 * **scales:** It provides additional functions for plots.
+* **naniar:** Useful for analysis of missing values.
+* **bit64:** Proper display of integers with type int64. This is important for import with fread.
 
 Just execute the following code to install missing packages.
 
 ```{r eval=FALSE}
-list_of_packages <- c("tidyverse", "janitor", "DT", "data.table", "phylotools", "ggrepel", "pheatmap", "dendsort", "plotly", "scales")
+list_of_packages <- c("tidyverse", "janitor", "DT", "data.table", "phylotools", "ggrepel", "pheatmap", "dendsort", "plotly", "scales", "naniar", "bit64")
 new_packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
 if(length(new_packages)) install.packages(new_packages)
 ```

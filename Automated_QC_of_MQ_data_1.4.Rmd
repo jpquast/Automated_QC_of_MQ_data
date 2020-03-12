@@ -33,7 +33,8 @@ Some concepts and ideas are taken from the [PTXQC package](https://pubs.acs.org/
 **ggrepel:** This package allows the addition of improved labels to ggplot.  
 **pheatmap:** Makes pretty and easy heatmaps.  
 **dendsort:** Sort the dendrogram created for heatmap.  
-**plotly:** Creates interactive figures from ggplot.  
+**plotly:** Creates interactive figures from ggplot. 
+**naniar:** Useful for analysis of missing values
 
 ```{r loading_packages, message=FALSE, warning=FALSE}
 
@@ -46,6 +47,7 @@ library(pheatmap)
 library(dendsort)
 library(phylotools)
 library(plotly)
+library(naniar)
 
 ```
 
@@ -851,7 +853,7 @@ peptides_samples%>%
   count(name = "frequency")%>%
   ungroup()%>%
   mutate(n_samples_peptide = as.factor(n_samples_peptide))%>%
-  ggplot(aes(experiment, frequency, fill = n_samples_peptide))+
+  ggplot(aes(paste(str_replace_all(as.character(experiment), fixed("_"), " ")), frequency, fill = n_samples_peptide))+
   geom_bar(stat = 'identity', col = "black") +
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))+
@@ -1029,7 +1031,7 @@ cv_peptide_lip %>%
   geom_histogram(binwidth = 0.05, color = "black", fill = "steelblue1")+
   scale_x_continuous(breaks = round(seq(min(cv_peptide_lip$cv), max(cv_peptide_lip$cv)+0.5, by = 0.2),1 ))+
   theme_bw()+
-  labs(title = "CV frequency of modfied peptide intensities (LiP)", subtitle = "Without decoys and contaminants", x = "CV (coefficient of variation)", y = "Frequency")+
+  labs(title = "CV frequency of modified peptide intensities (LiP)", subtitle = "Without decoys and contaminants", x = "CV (coefficient of variation)", y = "Frequency")+
   geom_vline(aes(xintercept = median),col='black',size=1, linetype = "dashed")+
   facet_wrap(~paste(type, "(median:", round(median, 3), ")"), ncol=1)
 
@@ -1076,7 +1078,7 @@ cv_peptide_trypsin %>%
   geom_histogram(binwidth = 0.05, color = "black", fill = "steelblue1")+
   scale_x_continuous(breaks = round(seq(min(cv_peptide_trypsin$cv), max(cv_peptide_trypsin$cv)+0.5, by = 0.2),1 ))+
   theme_bw()+
-  labs(title = "CV frequency of modfied peptide intensities (Tryptic digest)", subtitle = "Without decoys and contaminants", x = "CV (coefficient of variation)", y = "Frequency")+
+  labs(title = "CV frequency of modified peptide intensities (Tryptic digest)", subtitle = "Without decoys and contaminants", x = "CV (coefficient of variation)", y = "Frequency")+
   geom_vline(aes(xintercept = median),col='black',size=1, linetype = "dashed")+
   facet_wrap(~paste(type, "(median:", round(median, 3), ")"), ncol=1)
 
@@ -1290,6 +1292,58 @@ correlation_normalised <- normalised %>%
 cor(correlation_normalised, method = "spearman")%>%
 pheatmap()
 
+```
+
+# Analysis of missingness
+
+The distribution of missing values in an experiment is an important indicator for the quality of the experiment. If match between runs was used that amount of missing values is expected to be lower.
+
+The plots display how many missing values there are per sample (separated by LiP and tryptic control) and how missing values are distributed in the first 1000 observations (not separated by Lip and tryptic control). This allows an assessment of potential systematic missingness in some of the samples. It is for example normal that many peptides from the trypsin control are not overlapping with LiP experiments and vice versa.
+
+```{r missing_per_sample, message=FALSE, warning=FALSE}
+
+missing_per_sample_lip <- normalised %>%
+  ungroup()%>%
+  filter(pipeline == "LiP")%>%
+  distinct(experiment, sequence, normalised_intensity_log2, pipeline)%>%
+  complete(experiment, sequence, pipeline)%>%
+  group_by(experiment)%>%
+  summarize(frequency = sum(is.na(normalised_intensity_log2))/n()*100, pipeline = unique(pipeline))
+
+missing_per_sample <- normalised %>%
+  ungroup()%>%
+  filter(pipeline == "Trypsin Digest")%>%
+  distinct(experiment, sequence, normalised_intensity_log2, pipeline)%>%
+  complete(experiment, sequence, pipeline)%>%
+  group_by(experiment)%>%
+  summarize(frequency = sum(is.na(normalised_intensity_log2))/n()*100, pipeline = unique(pipeline))%>%
+  bind_rows(missing_per_sample_lip)%>%
+  mutate(experiment = as.factor(experiment))
+
+missing_per_sample_plot <- missing_per_sample %>%
+  ggplot(aes(paste(str_replace_all(as.character(experiment), fixed("_"), " ")), frequency))+
+  geom_col(fill = "seashell3", col = "black")+
+  facet_wrap(~pipeline, scales = "free_x")+
+  labs(title = "Missing values of normalised intensity for each sample and pipeline", x = "", y = "Frequency of missing values [%]")+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, hjust =1, size =8))
+
+ggplotly(missing_per_sample_plot)
+
+```
+
+```{r vis_missing, fig.height=5, fig.width=15}
+vis_missing <- normalised %>%
+   distinct(experiment, sequence, normalised_intensity_log2)%>%
+  complete(experiment, sequence)%>%
+  spread(experiment, normalised_intensity_log2)%>%
+  select(-sequence)%>%
+  slice(1:1000)
+
+vis_miss(vis_missing, cluster = TRUE)+
+  theme_bw()+
+  labs(title = "Missing values of normalised intensity for each sample (first 1000 observations)")+
+  theme(axis.text.x = element_text(angle = 45, hjust=0))
 ```
 
 # Protein intensity calculation
