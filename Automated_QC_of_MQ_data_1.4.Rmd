@@ -1348,7 +1348,7 @@ vis_miss(vis_missing, cluster = TRUE)+
 
 # Protein intensity calculation
 
-The protein intensity is computed using the MaxLFQ algorythm implemented into R by the [iq package](https://watermark.silverchair.com/btz961.pdf?token=AQECAHi208BE49Ooan9kkhW_Ercy7Dm3ZL_9Cf3qfKAc485ysgAAAp8wggKbBgkqhkiG9w0BBwagggKMMIICiAIBADCCAoEGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMWXpfsArbcjAjXXGRAgEQgIICUgve35lUkwBakkwVpzx9KXnwkqn0Iw0ucOo5t3VOi9q1dJRrE2hzZJKJ8OCbh1SKPIMFNV_UD9bQjZwj2Sock2z8exjFiXGWOTi3IUyYFUCTJEy8UnTu8RVYKLKd1Wxw3vDVhOsA51YwQU-T6ggO2G7P0_4BIP6mF2TXrVIaa1t_Rp0Zju43J16ggTDATPhsLXwZUlCPMjh_gBK83a20N5jVECkMNPmm9QWs9gWvBcucH-VRDRwF4TNmgRZM1K5wJ5f1rHiObcksd7dUgSPiTIR-YIqIkFyapZOA048mwdnTBXi2xG95hY0DfVIr5UIiktLInVW5tfCSBfsQBxezJeL2W6TERd6Tn4sK8x_hGfFpJB7zUfyqUAPVRKj8MemRFWOk_Z_PqePmvRxLazTQQhDOgtmdgwNfaZYcT8YW8uVOqhJuFOhbd7ECDDy_qwDoJQpARTcs2i-jTzEVDlfn34H8E5Wfo5nu5Wpa2jTG3fGIv4l4yq9fFhYYd1StO59qXwnd0lRynvF9WnLu3Q1lSHdgfmHlvs9pYQ2vFvqanrsF85NBdAQnKzJE_dq7DKkeRxwLSl7ELPHbUbD6A1CgzvHMcx7A3LpwS8rDbi1zWNJjhW2ujw0ZYM7RgrfDxf61j57ww8fag2ejdzGugV7VLbVOYLaq1CeiGvB7qvWnCriKrLZhlKDef0b9pDVi9V6zNpWzjlh0GVxOOXRNs0I8IYYHD7z5Ei2QsqJz8eJRirBkNaq73G6QIZl8lqsdIjOZGlAEm3Rn7oBnv60DQThsNs4nWA). It is based on [MaxLFQ](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4159666/pdf/zjw2513.pdf) that uses peptide ration information to calculate protein abundances. It can be found as a feature in Maxquant.
+The protein intensity is computed using the MaxLFQ algorythm implemented into R by the [iq package](https://watermark.silverchair.com/btz961.pdf?token=AQECAHi208BE49Ooan9kkhW_Ercy7Dm3ZL_9Cf3qfKAc485ysgAAAp8wggKbBgkqhkiG9w0BBwagggKMMIICiAIBADCCAoEGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMWXpfsArbcjAjXXGRAgEQgIICUgve35lUkwBakkwVpzx9KXnwkqn0Iw0ucOo5t3VOi9q1dJRrE2hzZJKJ8OCbh1SKPIMFNV_UD9bQjZwj2Sock2z8exjFiXGWOTi3IUyYFUCTJEy8UnTu8RVYKLKd1Wxw3vDVhOsA51YwQU-T6ggO2G7P0_4BIP6mF2TXrVIaa1t_Rp0Zju43J16ggTDATPhsLXwZUlCPMjh_gBK83a20N5jVECkMNPmm9QWs9gWvBcucH-VRDRwF4TNmgRZM1K5wJ5f1rHiObcksd7dUgSPiTIR-YIqIkFyapZOA048mwdnTBXi2xG95hY0DfVIr5UIiktLInVW5tfCSBfsQBxezJeL2W6TERd6Tn4sK8x_hGfFpJB7zUfyqUAPVRKj8MemRFWOk_Z_PqePmvRxLazTQQhDOgtmdgwNfaZYcT8YW8uVOqhJuFOhbd7ECDDy_qwDoJQpARTcs2i-jTzEVDlfn34H8E5Wfo5nu5Wpa2jTG3fGIv4l4yq9fFhYYd1StO59qXwnd0lRynvF9WnLu3Q1lSHdgfmHlvs9pYQ2vFvqanrsF85NBdAQnKzJE_dq7DKkeRxwLSl7ELPHbUbD6A1CgzvHMcx7A3LpwS8rDbi1zWNJjhW2ujw0ZYM7RgrfDxf61j57ww8fag2ejdzGugV7VLbVOYLaq1CeiGvB7qvWnCriKrLZhlKDef0b9pDVi9V6zNpWzjlh0GVxOOXRNs0I8IYYHD7z5Ei2QsqJz8eJRirBkNaq73G6QIZl8lqsdIjOZGlAEm3Rn7oBnv60DQThsNs4nWA). It is based on [MaxLFQ](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4159666/pdf/zjw2513.pdf) that uses peptide ration information to calculate protein abundances. It can be found as a feature in Maxquant. Only protein intensities for proteins with more than one precursor in a respective run are computed.
 
 ```{r maxlfq}
 split_tibble <- function(tibble, col = 'col'){
@@ -1400,7 +1400,15 @@ maxlfq_tibble <- maxlfq %>%
     map_dfr(bind_rows, .id = "leading_razor_protein")
 
 complete_normalised <- normalised %>%
-  left_join(maxlfq_tibble, by = c("experiment", "leading_razor_protein"))
+  mutate(precursor = paste0(modified_sequence, charge))%>%
+  select(experiment, leading_razor_protein, precursor, normalised_precursor_intensity_log2)%>%
+  left_join(maxlfq_tibble, by = c("experiment", "leading_razor_protein"))%>%
+  group_by(experiment, leading_razor_protein)%>%
+  filter(!is.na(normalised_precursor_intensity_log2))%>%
+  mutate(n_precursor = n_distinct(precursor))%>%
+  filter(n_precursor > 1)%>%
+  distinct(experiment, leading_razor_protein, protein_intensity_log2)%>%
+  right_join(normalised, by = c("experiment", "leading_razor_protein"))
 
 protint[["A0MZ66"]]%>%
   drop_na()%>%
