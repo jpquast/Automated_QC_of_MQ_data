@@ -33,7 +33,7 @@ Some concepts and ideas are taken from the [PTXQC package](https://pubs.acs.org/
 **ggrepel:** This package allows the addition of improved labels to ggplot.  
 **pheatmap:** Makes pretty and easy heatmaps.  
 **dendsort:** Sort the dendrogram created for heatmap.  
-**plotly:** Creates interactive figures from ggplot. 
+**plotly:** Creates interactive figures from ggplot.  
 **naniar:** Useful for analysis of missing values
 
 ```{r loading_packages, message=FALSE, warning=FALSE}
@@ -181,15 +181,15 @@ The relevant variables from the **summary** dataset are selected and stored in *
 ```{r joining_datasets, message=FALSE, warning=FALSE}
 
 complete <- evidence %>%
-  select(columns_evidence, one_of("fraction"))%>%
-  left_join((select(peptides, columns_peptides)), by = "sequence") %>%
+  select(all_of(columns_evidence), one_of("fraction"))%>%
+  left_join((select(peptides, all_of(columns_peptides))), by = "sequence") %>%
   left_join(map, by = "experiment")%>%
   mutate(N_term_tryp = ifelse(amino_acid_before == "-" | amino_acid_before == "K" | amino_acid_before == "R", TRUE, FALSE ))%>%
   mutate(C_term_tryp = ifelse(last_amino_acid == "K" | last_amino_acid == "R" | last_amino_acid == "-", TRUE, FALSE ))%>%
   mutate(pep_type = fct_relevel(factor(ifelse(N_term_tryp + C_term_tryp == 2, "Fully-tryptic", ifelse(N_term_tryp + C_term_tryp == 1,"Semi-tryptic", "Non-tryptic"))), "Non-tryptic", after = Inf))
 
 sample_summary <- summary %>%
-  select(columns_summary)%>%
+  select(all_of(columns_summary))%>%
   filter(experiment != "")
 
 ```
@@ -1409,16 +1409,6 @@ complete_normalised <- normalised %>%
   filter(n_precursor > 1)%>%
   distinct(experiment, leading_razor_protein, protein_intensity_log2)%>%
   right_join(normalised, by = c("experiment", "leading_razor_protein"))
-
-protint[["A0MZ66"]]%>%
-  drop_na()%>%
-ggplot(aes(experiment, intensity, group = precursor, col = precursor))+
-  geom_point()+
-  geom_line(size = 1)+
-  labs(title = names(protint["A0MZ66"]), x = "Experiment", y = "Intensity [log2]")+
-  scale_color_manual(values=c(rep("gray", nrow(normalised_list[["A0MZ66"]])), "green"))+
-  theme_bw()+
-  theme(axis.text.x = element_text(angle = 45, hjust =1))
 ```
 
 ```{r export}
