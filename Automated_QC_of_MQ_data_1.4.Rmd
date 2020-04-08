@@ -240,14 +240,14 @@ MaxQuant computes summaries for each sample and saves them in the summary file. 
 
 ```{r summary, message=FALSE, warning=FALSE}
 datatable(sample_summary, rownames = FALSE, extensions = 'FixedColumns',
-  options = list(
-  dom = 'til',
-  pageLength = 8,
-  lengthMenu = c(4, 8, 16, 32, 50, 100),
-  scrollX = TRUE,
-  fixedColumns = list(leftColumns = 1),
-  scrollCollapse = TRUE
-))
+          options = list(
+            dom = 'til',
+            pageLength = 8,
+            lengthMenu = c(4, 8, 16, 32, 50, 100),
+            scrollX = TRUE,
+            fixedColumns = list(leftColumns = 1),
+            scrollCollapse = TRUE
+          ))
 ```
 
 ## Overview summary plots
@@ -384,14 +384,14 @@ missed_cleavages <- complete_clean %>%
   mutate(missed_cleavages = fct_inorder(factor(missed_cleavages)))
 
 missed_cleavages%>%
-   ggplot(aes(paste(str_replace_all(as.character(experiment), fixed("_"), " ")), y = missed_cleavages_per, fill = missed_cleavages))+
+  ggplot(aes(paste(str_replace_all(as.character(experiment), fixed("_"), " ")), y = missed_cleavages_per, fill = missed_cleavages))+
   geom_col(col = "black")+
   scale_fill_discrete(name="Missed cleavages")+
   geom_text(data = subset(missed_cleavages, missed_cleavages_per > 5), aes(label=round(missed_cleavages_per, digits=1)), position = position_stack(vjust = 0.5))+
   labs(title = "Missed cleavages per Raw file", subtitle = "Excluding decoys, excluding contaminants", x = "Experiment", y = "% of total peptides")+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
-  
+
 
 ```
 
@@ -441,7 +441,7 @@ oversampling <- complete %>%
   mutate(identifications = fct_inorder(fct_other(ms_ms_count, keep = c(1, 2), other_level = "3+")))%>%
   group_by(experiment, identifications)%>%
   summarize(ratio = sum(ratio))
- 
+
 oversampling %>%
   ggplot(aes(paste(str_replace_all(as.character(experiment), fixed("_"), " ")), y = ratio, fill = identifications))+
   geom_col(col = "black")+
@@ -499,7 +499,7 @@ peak_width <- complete %>%
   select(experiment, retention_time, retention_length)%>%
   ggplot(aes(retention_time, retention_length))+
   stat_summary_bin(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, geom = "line", binwidth = 1, fun = median)+
-    labs(title = "Median peak width over retention time", subtitle = "Including decoys, including contaminants", x = "Retention time [min]", y = "Median peak width [min]", color = "Experiment")+
+  labs(title = "Median peak width over retention time", subtitle = "Including decoys, including contaminants", x = "Retention time [min]", y = "Median peak width [min]", color = "Experiment")+
   theme_bw()
 ```
 
@@ -520,7 +520,7 @@ id_over_RT <- complete_clean_contaminants %>%
   mutate(count = 1)%>%
   ggplot(aes(retention_time, count))+
   stat_summary_bin(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, geom = "line", binwidth = 1, fun = sum)+
-    labs(title = "Peptide identifications over retention time", subtitle = "Excluding decoys, including contaminants", x = "Retention time [min]", y = "ID count per minute", color = "Experiment")+
+  labs(title = "Peptide identifications over retention time", subtitle = "Excluding decoys, including contaminants", x = "Retention time [min]", y = "ID count per minute", color = "Experiment")+
   theme_bw()
 
 ggplotly(id_over_RT)
@@ -545,9 +545,9 @@ topn_rt <- msmsscans %>%
 topn_rt_plot <- topn_rt%>%
   ggplot(aes(binRT, median_topN))+
   geom_line(aes(col = paste(str_replace_all(as.character(experiment), fixed("_"), " "))), size = 1, )+
-    labs(title = "TopN over retention time", x = "Retention time [min]", y = "TopN [median per 2 min RT bin]", color = "Experiment")+
+  labs(title = "TopN over retention time", x = "Retention time [min]", y = "TopN [median per 2 min RT bin]", color = "Experiment")+
   theme_bw()
-  
+
 ggplotly(topn_rt_plot)
 ```
 
@@ -607,7 +607,7 @@ alignment <- complete %>%
   group_by(experiment)%>%
   mutate(fraction_good = (sum(delta_RT<0.7&delta_RT>-0.7)/n()))%>%
   mutate(quality = ifelse(delta_RT<0.7 & delta_RT>-0.7, "Good (<0.7 min)", "Bad (>0.7 min)"))
- 
+
 alignment %>% 
   ggplot(aes(calibrated_retention_time, delta_RT, col = quality))+
   geom_point()+
@@ -639,7 +639,7 @@ alignment <- complete %>%
   group_by(experiment, fraction)%>%
   mutate(fraction_good = (sum(delta_RT<0.7&delta_RT>-0.7)/n()))%>%
   mutate(quality = ifelse(delta_RT<0.7 & delta_RT>-0.7, "Good (<0.7 min)", "Bad (>0.7 min)"))
- 
+
 alignment %>% 
   ggplot(aes(calibrated_retention_time, delta_RT, col = quality))+
   geom_point()+
@@ -845,7 +845,7 @@ peptides_samples%>%
 
 
 ```{r n_pep_by_freq, fig.align = "center", fig.height=6, fig.width=(6+(n_samples*0.25)), message=FALSE, warning=FALSE}
-  complete_clean %>%
+complete_clean %>%
   distinct(sequence, experiment)%>%
   group_by(sequence)%>%
   mutate(n_samples_peptide = n())%>%
@@ -901,7 +901,7 @@ cum_peptides%>%
   labs(title = "Total unique Peptides per Sample and cumulative over Samples", x = "Experiment", y = "Number of Peptides")+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
-  
+
 ```
 
 ## Semi-tryptic peptides
@@ -975,8 +975,8 @@ intensity_plot <- complete_clean %>%
   ggplot(aes(paste(str_replace_all(as.character(experiment), fixed("_"), " ")), sum_intensity))+
   geom_boxplot(fill = "steelblue1")+
   scale_y_continuous(trans = scales::log2_trans(),
-    breaks = scales::trans_breaks("log2", function(x) 2^x),
-    labels = scales::trans_format("log2", scales::math_format(2^.x)))+
+                     breaks = scales::trans_breaks("log2", function(x) 2^x),
+                     labels = scales::trans_format("log2", scales::math_format(2^.x)))+
   labs(title = "Peptide intensity distribution over runs", subtitle = "Excluding decoys, excluding contaminants", x = "Experiment", y = "log2 Intensity")+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
@@ -1110,11 +1110,11 @@ pca_sdev_df <- pca_sdev_df %>%
   mutate(percent_variance = (pca$sdev^2/sum(pca$sdev^2)*100), dimension = row.names(.))
 
 pca_df%>%
-ggplot(aes(PC1, PC2, col=replicate_group, shape = pipeline))+
-geom_point(size = 3)+
-labs(title = "Principal component analysis of samples", subtitle = "Excluding decoys, excluding contaminants", x = paste("PC1", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 1],1), "%)"), y = paste("PC2", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 2],1), "%)"), color = "Experiment", shape = "Pipeline")+
-geom_text_repel(aes(label = paste(str_replace_all(as.character(experiment), fixed("_"), " ")),  color = replicate_group), size = 4, show.legend = FALSE)+
-theme_bw()
+  ggplot(aes(PC1, PC2, col=replicate_group, shape = pipeline))+
+  geom_point(size = 3)+
+  labs(title = "Principal component analysis of samples", subtitle = "Excluding decoys, excluding contaminants", x = paste("PC1", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 1],1), "%)"), y = paste("PC2", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 2],1), "%)"), color = "Experiment", shape = "Pipeline")+
+  geom_text_repel(aes(label = paste(str_replace_all(as.character(experiment), fixed("_"), " ")),  color = replicate_group), size = 4, show.legend = FALSE)+
+  theme_bw()
 
 
 ```
@@ -1137,7 +1137,7 @@ correlation <- complete_clean %>%
   drop_na()
 
 cor(correlation, method = "spearman")%>%
-pheatmap()
+  pheatmap()
 
 ```
 
@@ -1170,13 +1170,13 @@ normalised_lip <- complete_clean %>%
   mutate(normalised_precursor_intensity = (intensity/median_run_intensity)*median_intensity)%>%
   select(-median_run_intensity, -median_intensity)%>%
   mutate(normalised_precursor_intensity_log2 = log2(normalised_precursor_intensity))
-  
+
 
 normalised_trypsin <- complete_clean %>%
   filter(!is.na(intensity), pipeline == "Trypsin Digest")%>%
   group_by(experiment, sequence)%>%
   mutate(sum_intensity = sum(intensity))%>%
-   group_by(experiment)%>%
+  group_by(experiment)%>%
   distinct(sum_intensity, sequence)%>%
   mutate(median_run_intensity = median(sum_intensity))%>%
   ungroup()%>%
@@ -1205,8 +1205,8 @@ normalised_intensities_plot <- normalised %>%
   geom_boxplot(fill = "steelblue1")+
   labs(title = "Median normalised peptide intensity distribution over runs", subtitle = "Excluding decoys, excluding contaminants", x = "Experiment", y = "log2 Intensity")+
   scale_y_continuous(trans = scales::log2_trans(),
-    breaks = scales::trans_breaks("log2", function(x) 2^x),
-    labels = scales::trans_format("log2", scales::math_format(2^.x)))+
+                     breaks = scales::trans_breaks("log2", function(x) 2^x),
+                     labels = scales::trans_format("log2", scales::math_format(2^.x)))+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust =1))
 
@@ -1226,7 +1226,7 @@ RSD_trypsin_normalised <- normalised %>%
   filter(!is.na(normalised_intensity), pipeline == "Trypsin Digest")%>%
   group_by(experiment)%>%
   summarize(median = median(normalised_intensity))%>%
- mutate(RSD_median = sd(median)/mean(median)*100, mean_median = mean(median), sd_median = sd(median))
+  mutate(RSD_median = sd(median)/mean(median)*100, mean_median = mean(median), sd_median = sd(median))
 
 if(nrow(RSD_trypsin_normalised) == 0){RSD_trypsin_normalised[1, ] <- NA}
 ```
@@ -1268,11 +1268,11 @@ pca_sdev_df_normalised <- pca_sdev_df_normalised %>%
   mutate(percent_variance = (pca$sdev^2/sum(pca$sdev^2)*100), dimension = row.names(.))
 
 pca_df_normalised%>%
-ggplot(aes(PC1, PC2, col=replicate_group, shape = pipeline))+
-geom_point(size = 3)+
-labs(title = "Principal component analysis of samples", subtitle = "Excluding decoys, excluding contaminants", x = paste("PC1", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 1],1), "%)"), y = paste("PC2", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 2],1), "%)"), color = "Experiment", shape = "Pipeline")+
-geom_text_repel(aes(label = paste(str_replace_all(as.character(experiment), fixed("_"), " ")),  color = replicate_group), size = 4, show.legend = FALSE)+
-theme_bw()
+  ggplot(aes(PC1, PC2, col=replicate_group, shape = pipeline))+
+  geom_point(size = 3)+
+  labs(title = "Principal component analysis of samples", subtitle = "Excluding decoys, excluding contaminants", x = paste("PC1", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 1],1), "%)"), y = paste("PC2", "(", round(pca_sdev_df$percent_variance[pca_sdev_df$dimension == 2],1), "%)"), color = "Experiment", shape = "Pipeline")+
+  geom_text_repel(aes(label = paste(str_replace_all(as.character(experiment), fixed("_"), " ")),  color = replicate_group), size = 4, show.legend = FALSE)+
+  theme_bw()
 
 
 ```
@@ -1290,7 +1290,7 @@ correlation_normalised <- normalised %>%
   drop_na()
 
 cor(correlation_normalised, method = "spearman")%>%
-pheatmap()
+  pheatmap()
 
 ```
 
@@ -1334,7 +1334,7 @@ ggplotly(missing_per_sample_plot)
 
 ```{r vis_missing, fig.height=5, fig.width=15}
 vis_missing <- normalised %>%
-   distinct(experiment, sequence, normalised_intensity_log2)%>%
+  distinct(experiment, sequence, normalised_intensity_log2)%>%
   complete(experiment, sequence)%>%
   spread(experiment, normalised_intensity_log2)%>%
   select(-sequence)%>%
@@ -1350,6 +1350,8 @@ vis_miss(vis_missing, cluster = TRUE)+
 
 The protein intensity is computed using the MaxLFQ algorythm implemented into R by the [iq package](https://watermark.silverchair.com/btz961.pdf?token=AQECAHi208BE49Ooan9kkhW_Ercy7Dm3ZL_9Cf3qfKAc485ysgAAAp8wggKbBgkqhkiG9w0BBwagggKMMIICiAIBADCCAoEGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMWXpfsArbcjAjXXGRAgEQgIICUgve35lUkwBakkwVpzx9KXnwkqn0Iw0ucOo5t3VOi9q1dJRrE2hzZJKJ8OCbh1SKPIMFNV_UD9bQjZwj2Sock2z8exjFiXGWOTi3IUyYFUCTJEy8UnTu8RVYKLKd1Wxw3vDVhOsA51YwQU-T6ggO2G7P0_4BIP6mF2TXrVIaa1t_Rp0Zju43J16ggTDATPhsLXwZUlCPMjh_gBK83a20N5jVECkMNPmm9QWs9gWvBcucH-VRDRwF4TNmgRZM1K5wJ5f1rHiObcksd7dUgSPiTIR-YIqIkFyapZOA048mwdnTBXi2xG95hY0DfVIr5UIiktLInVW5tfCSBfsQBxezJeL2W6TERd6Tn4sK8x_hGfFpJB7zUfyqUAPVRKj8MemRFWOk_Z_PqePmvRxLazTQQhDOgtmdgwNfaZYcT8YW8uVOqhJuFOhbd7ECDDy_qwDoJQpARTcs2i-jTzEVDlfn34H8E5Wfo5nu5Wpa2jTG3fGIv4l4yq9fFhYYd1StO59qXwnd0lRynvF9WnLu3Q1lSHdgfmHlvs9pYQ2vFvqanrsF85NBdAQnKzJE_dq7DKkeRxwLSl7ELPHbUbD6A1CgzvHMcx7A3LpwS8rDbi1zWNJjhW2ujw0ZYM7RgrfDxf61j57ww8fag2ejdzGugV7VLbVOYLaq1CeiGvB7qvWnCriKrLZhlKDef0b9pDVi9V6zNpWzjlh0GVxOOXRNs0I8IYYHD7z5Ei2QsqJz8eJRirBkNaq73G6QIZl8lqsdIjOZGlAEm3Rn7oBnv60DQThsNs4nWA). It is based on [MaxLFQ](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4159666/pdf/zjw2513.pdf) that uses peptide ration information to calculate protein abundances. It can be found as a feature in Maxquant. Only protein intensities for proteins with more than one precursor in a respective run are computed.
 
+The result of the MaxLFQ calculation by iq can be examined using the "MaxLFQ Explorer" shiny app. It can be found in the same repository as this script.
+
 ```{r maxlfq}
 split_tibble <- function(tibble, col = 'col'){
   tibble %>% split(., .[,col])
@@ -1359,10 +1361,10 @@ transform_list <- function(x, .pb=NULL){
   if ((!is.null(.pb)) && inherits(.pb, "Progress") && (.pb$i < .pb$n)) .pb$tick()$print()
   
   x%>%
-  select(-leading_razor_protein)%>%
-  pivot_wider(names_from = experiment, values_from = normalised_precursor_intensity_log2)%>%
-  column_to_rownames("precursor")%>%
-  as.matrix()
+    select(-leading_razor_protein)%>%
+    pivot_wider(names_from = experiment, values_from = normalised_precursor_intensity_log2)%>%
+    column_to_rownames("precursor")%>%
+    as.matrix()
 }
 
 sample_names <- sort(unique(complete_clean$experiment))
@@ -1397,7 +1399,7 @@ protint <- normalised_list %>%
 
 maxlfq_tibble <- maxlfq %>%
   map(pivot_longer, everything(), names_to = "experiment", values_to = "protein_intensity_log2")%>%
-    map_dfr(bind_rows, .id = "leading_razor_protein")
+  map_dfr(bind_rows, .id = "leading_razor_protein")
 
 complete_normalised <- normalised %>%
   mutate(precursor = paste0(modified_sequence, charge))%>%
