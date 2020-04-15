@@ -134,10 +134,26 @@ Here we define which columns we want to keep for the further analysis of the **p
 **First amino acid:** The amino acid in the first position of the peptide sequence.  
 **Last amino acid:** The amino acid in the last position of the peptide sequence.  
 **Amino acid after:** The amino acid in the protein sequence after the peptide.  
-**H Count:** The number of instances of the 'H' amino acid contained within the sequence.  
-**C Count:** The number of instances of the 'C' amino acid contained within the sequence.  
+**A Count:** The number of instances of the 'A' amino acid contained within the sequence.  
+**R Count:** The number of instances of the 'R' amino acid contained within the sequence.  
+**N Count:** The number of instances of the 'N' amino acid contained within the sequence.  
 **D Count:** The number of instances of the 'D' amino acid contained within the sequence.  
+**C Count:** The number of instances of the 'C' amino acid contained within the sequence.  
+**Q Count:** The number of instances of the 'Q' amino acid contained within the sequence.  
 **E Count:** The number of instances of the 'E' amino acid contained within the sequence.  
+**G Count:** The number of instances of the 'G' amino acid contained within the sequence.  
+**H Count:** The number of instances of the 'H' amino acid contained within the sequence.  
+**I Count:** The number of instances of the 'I' amino acid contained within the sequence.  
+**L Count:** The number of instances of the 'L' amino acid contained within the sequence.  
+**K Count:** The number of instances of the 'K' amino acid contained within the sequence.  
+**M Count:** The number of instances of the 'M' amino acid contained within the sequence.  
+**F Count:** The number of instances of the 'F' amino acid contained within the sequence.  
+**P Count:** The number of instances of the 'P' amino acid contained within the sequence.  
+**S Count:** The number of instances of the 'S' amino acid contained within the sequence.  
+**T Count:** The number of instances of the 'T' amino acid contained within the sequence.  
+**W Count:** The number of instances of the 'W' amino acid contained within the sequence.  
+**Y Count:** The number of instances of the 'Y' amino acid contained within the sequence.  
+**V Count:** The number of instances of the 'V' amino acid contained within the sequence.  
 **Start position:** Position of the first amino acid of this peptide in the protein sequence. (one-based)  
 **End position:** Position of the last amino acid of this peptide in the protein sequence. (one-based)  
 
@@ -167,7 +183,7 @@ row_parameters <- c("Version", "User name", "Machine name", "Date of writing", "
 
 columns_evidence <- c("sequence", "modified_sequence", "modifications", "length", "missed_cleavages", "leading_razor_protein", "type", "experiment",  "intensity", "reverse", "potential_contaminant", "charge", "mass_error_ppm", "uncalibrated_mass_error_ppm", "retention_time", "retention_length", "calibrated_retention_time", "ms_ms_count", "match_time_difference")
 
-columns_peptides <- c("sequence", "n_term_cleavage_window", "c_term_cleavage_window", "amino_acid_before", "first_amino_acid", "last_amino_acid", "amino_acid_after", "h_count", "c_count", "d_count", "e_count", "start_position", "end_position")
+columns_peptides <- c("sequence", "n_term_cleavage_window", "c_term_cleavage_window", "amino_acid_before", "first_amino_acid", "last_amino_acid", "amino_acid_after", "a_count", "r_count", "n_count", "q_count", "g_count", "h_count", "i_count", "l_count", "k_count", "m_count", "f_count", "p_count", "s_count", "t_count", "w_count", "y_count", "v_count", "c_count", "d_count", "e_count", "start_position", "end_position")
 
 columns_summary <- c("experiment", "ms", "ms_ms", "ms_ms_submitted", "ms_ms_identified", "ms_ms_identified_percent", "peptide_sequences_identified", "peaks", "peaks_sequenced", "peaks_sequenced_percent", "peaks_repeatedly_sequenced", "peaks_repeatedly_sequenced_percent", "isotope_patterns", "isotope_patterns_sequenced", "isotope_patterns_repeatedly_sequenced", "isotope_patterns_repeatedly_sequenced_percent", "av_absolute_mass_deviation_ppm", "mass_standard_deviation_ppm")
 ```
