@@ -82,13 +82,14 @@ Structure of the `map.txt` file:
 fasta <- read.fasta(file.choose("."))%>%clean_names()
 proteome <- fasta %>%
   mutate(uniprot_id = str_extract(seq_name, "\\|.*?\\|")%>% str_extract(.,"(\\w){1,}"))%>%
-  select(-seq_name)
-msmsscans <- fread("msmsScans.txt", na.strings = c("NaN")) %>% clean_names()
-parameters <- fread("parameters.txt", na.strings = c("NaN")) %>% clean_names()
-peptides <- fread("peptides.txt", na.strings = c("NaN")) %>% clean_names()
-evidence <- fread("evidence.txt", na.strings = c("NaN"), colClasses = c(Intensity = "numeric")) %>% clean_names()
-summary <- fread("summary.txt", na.strings = c("NaN")) %>% clean_names()
-map <- fread("map.txt", na.strings = c("NaN")) %>% clean_names()
+  select(-seq_name) %>%
+  as_tibble()
+msmsscans <- fread("msmsScans.txt", na.strings = c("NaN")) %>% clean_names() %>% as_tibble()
+parameters <- fread("parameters.txt", na.strings = c("NaN")) %>% clean_names() %>% as_tibble()
+peptides <- fread("peptides.txt", na.strings = c("NaN")) %>% clean_names() %>% as_tibble()
+evidence <- fread("evidence.txt", na.strings = c("NaN"), colClasses = c(Intensity = "numeric")) %>% clean_names() %>% as_tibble()
+summary <- fread("summary.txt", na.strings = c("NaN")) %>% clean_names() %>% as_tibble()
+map <- fread("map.txt", na.strings = c("NaN")) %>% clean_names() %>% as_tibble()
 ```
 
 ## Description of variables: {.tabset .tabset-pills}
@@ -721,15 +722,16 @@ rt_diff <- complete %>%
   group_by(experiment, modified_sequence, charge, type)%>%
   mutate(rt_diff_genuine = if_else(max(type_2) ==1 & max(type_3) != 0 & max(type_4) != 0, max(calibrated_retention_time)-min(calibrated_retention_time), 0))%>%
   group_by(experiment, modified_sequence, charge)%>%
-  mutate(rt_diff_mixed = if_else(type_2 ==0 & rt_diff_genuine == 0 & max(type_3) != 0 | type_2 == 0 & rt_diff_genuine == 0, max(calibrated_retention_time)-min(calibrated_retention_time),-1 ))%>%
+  mutate(rt_diff_mixed = if_else(type_2 ==0 & rt_diff_genuine == 0 & max(type_3) != 0 | type_2 == 0 & rt_diff_genuine == 0, max(calibrated_retention_time)-min(calibrated_retention_time), -1))%>%
   filter(type != "MSMS")%>%
   na_if(-1)%>%
   mutate_at(vars(rt_diff_genuine), na_if, 0)%>%
   distinct(experiment, modified_sequence, charge, rt_diff_genuine, rt_diff_mixed)%>%
   filter(!is.na(rt_diff_genuine) | !is.na(rt_diff_mixed))%>%
   group_by(experiment, modified_sequence, charge)%>%
+  mutate(rt_diff_genuine = if_else(is.na(rt_diff_genuine), -1, rt_diff_genuine), rt_diff_mixed = if_else(is.na(rt_diff_mixed), -1, rt_diff_mixed)) %>%
   summarize(rt_diff_genuine = max(rt_diff_genuine, na.rm = TRUE), rt_diff_mixed = max(rt_diff_mixed, na.rm = TRUE))%>%
-  na_if(-Inf)%>%
+  na_if(-1)%>%
   ungroup()
 
 ```
@@ -1373,9 +1375,7 @@ split_tibble <- function(tibble, col = 'col'){
   tibble %>% split(., .[,col])
 }
 
-transform_list <- function(x, .pb=NULL){
-  if ((!is.null(.pb)) && inherits(.pb, "Progress") && (.pb$i < .pb$n)) .pb$tick()$print()
-  
+transform_list <- function(x){
   x%>%
     select(-leading_razor_protein)%>%
     pivot_wider(names_from = experiment, values_from = normalised_precursor_intensity_log2)%>%
@@ -1384,8 +1384,6 @@ transform_list <- function(x, .pb=NULL){
 }
 
 sample_names <- sort(unique(complete_clean$experiment))
-
-pb <- progress_estimated(length(unique(normalised$leading_razor_protein)))
 
 normalised_list <- normalised %>%
   ungroup()%>%
