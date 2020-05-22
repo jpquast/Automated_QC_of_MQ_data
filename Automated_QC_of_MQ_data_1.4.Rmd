@@ -184,7 +184,7 @@ row_parameters <- c("Version", "User name", "Machine name", "Date of writing", "
 
 columns_evidence <- c("sequence", "modified_sequence", "modifications", "length", "missed_cleavages", "leading_razor_protein", "type", "experiment",  "intensity", "reverse", "potential_contaminant", "charge", "mass_error_ppm", "uncalibrated_mass_error_ppm", "retention_time", "retention_length", "calibrated_retention_time", "ms_ms_count", "match_time_difference")
 
-columns_peptides <- c("sequence", "n_term_cleavage_window", "c_term_cleavage_window", "amino_acid_before", "first_amino_acid", "last_amino_acid", "amino_acid_after", "a_count", "r_count", "n_count", "q_count", "g_count", "h_count", "i_count", "l_count", "k_count", "m_count", "f_count", "p_count", "s_count", "t_count", "w_count", "y_count", "v_count", "c_count", "d_count", "e_count", "start_position", "end_position")
+columns_peptides <- c("sequence", "n_term_cleavage_window", "c_term_cleavage_window", "amino_acid_before", "leading_razor_protein", "first_amino_acid", "last_amino_acid", "amino_acid_after", "a_count", "r_count", "n_count", "q_count", "g_count", "h_count", "i_count", "l_count", "k_count", "m_count", "f_count", "p_count", "s_count", "t_count", "w_count", "y_count", "v_count", "c_count", "d_count", "e_count", "start_position", "end_position")
 
 columns_summary <- c("experiment", "ms", "ms_ms", "ms_ms_submitted", "ms_ms_identified", "ms_ms_identified_percent", "peptide_sequences_identified", "peaks", "peaks_sequenced", "peaks_sequenced_percent", "peaks_repeatedly_sequenced", "peaks_repeatedly_sequenced_percent", "isotope_patterns", "isotope_patterns_sequenced", "isotope_patterns_repeatedly_sequenced", "isotope_patterns_repeatedly_sequenced_percent", "av_absolute_mass_deviation_ppm", "mass_standard_deviation_ppm")
 ```
@@ -199,7 +199,7 @@ The relevant variables from the **summary** dataset are selected and stored in *
 
 complete <- evidence %>%
   select(all_of(columns_evidence), one_of("fraction"))%>%
-  left_join((select(peptides, all_of(columns_peptides))), by = "sequence") %>%
+  left_join((select(peptides, all_of(columns_peptides))), by = c("sequence", "leading_razor_protein")) %>%
   left_join(map, by = "experiment")%>%
   mutate(N_term_tryp = ifelse(amino_acid_before == "-" | amino_acid_before == "K" | amino_acid_before == "R", TRUE, FALSE ))%>%
   mutate(C_term_tryp = ifelse(last_amino_acid == "K" | last_amino_acid == "R" | last_amino_acid == "-", TRUE, FALSE ))%>%
