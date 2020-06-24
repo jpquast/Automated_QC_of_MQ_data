@@ -23,7 +23,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       fileInput("complete_normalised", 
-                "complete_normalised.txt"),
+                "complete_normalised_maxLFQ.txt"),
       selectizeInput("protein", "Select a Protein", choices = NULL)
     ),
     

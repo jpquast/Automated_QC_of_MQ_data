@@ -29,7 +29,6 @@ Some concepts and ideas are taken from the [PTXQC package](https://pubs.acs.org/
 **janitor:** Usefull for making column names more R friendly.  
 **DT:** Data table to create interactive tables for markdown.  
 **data.table:** Package similar to dplyr, faster but less intuitive.  
-**phylotools:** Has read.fasta function to import fasta files to R.  
 **ggrepel:** This package allows the addition of improved labels to ggplot.  
 **pheatmap:** Makes pretty and easy heatmaps.  
 **dendsort:** Sort the dendrogram created for heatmap.  
@@ -45,7 +44,6 @@ library(data.table)
 library(ggrepel)
 library(pheatmap)
 library(dendsort)
-library(phylotools)
 library(plotly)
 library(naniar)
 
@@ -67,29 +65,82 @@ in the raw file.
 
 Structure of the `map.txt` file:
 
-* **sample_number:** 1, 2, 3...
-* **strain:** E. coli (K12)... 
-* **biological_replicate:** 1, 2, 3...
-* **technical_replicate:** 1, 2, 3..
-* **pipline:** LiP, Trypsin Digest
-* **ms_running_order:** 1, 2, 3...
-* **vial_position:** A1, A2, A3...
+* **sample_number:** 1, 2, 3...  
+* **strain:** First the strain needs to be indicated followed by the organism name (genus + species). Note that the genus is always capitalized. This is important in order to download the correct proteome from uniprot. K12 (Escherichia coli), HEK293T (Homo sapiens) etc. 
+* **biological_replicate:** 1, 2, 3...  
+* **technical_replicate:** 1, 2, 3...  
+* **pipline:** LiP, tryptic control  
+* **ms_running_order:** 1, 2, 3...  
+* **vial_position:** A1, A2, A3...  
 * **filename:** Name of the file that was the input for MaxQuant.Take from summary file.
-* **experiment:** Abbreviated name of the sample. Specified in MaxQuant as "Experiment". Take from summary file. E.g.: Control_01, Control_02, Treated_01... 
-* **replicate_group:** One number for each replicate group. control, control, control, control, treated, treated, treated, treated...
+* **experiment:** Abbreviated name of the sample. Specified in MaxQuant as "Experiment". Take from summary file. Eg.: Control_01, Control_02, Treated_01 etc.  
+* **replicate_group:** One name for each replicate group. control, control, control, control, treated, treated, treated, treated...  
+* **treatment:** Indicate the treatment name for samples that have been treated. Leave controls blank. Eg.: Rapamycin, GAPDH, DHAP, zinc etc.  
+* **dose:** Doses used for the treatment. Control should be indicated as 0. Eg.: 0, 0, 0, 0, 1000, 1000, 1000, 1000...  
+* **dose_unit:** unit of the doses. The unit should be the same for every treatment. Eg.: ug, uM, mM, nM etc.  
+
+```{r function_uniprot_query}
+try_query <- function (url, maxtry = 5)
+{
+  for (i in 1:maxtry) {
+    res <- tryCatch({
+      read.delim(url, stringsAsFactors = FALSE)
+    },
+    error = function(error) {
+      NULL
+    })
+    if (!is.null(res)) {
+      return(res)
+    } else{
+      Sys.sleep(3)
+    }
+  }
+  stop(paste("UniProt not responding."))
+}
+
+fetch_uniprot_organism <-
+  function (organism,
+            columns = c("id"),
+            reviewed = TRUE)
+  {
+    if (length(organism) == 0) {
+      stop("No valid organism found.")
+    }
+    url <- "http://www.uniprot.org/uniprot/?query="
+    colstr <- paste(columns, collapse = ",")
+    reviewed <-
+      paste0("reviewed:", ifelse(reviewed == TRUE, "yes", "no"))
+    organism <- paste0("organism:", organism)
+    qurl <-
+      URLencode(paste0(
+        url,
+        reviewed,
+        "+AND+",
+        organism,
+        "&format=tab&columns=",
+        colstr
+      ))
+    df <- try_query(qurl)
+    df
+  }
+```
 
 ```{r importing_data, warning = FALSE}
-fasta <- read.fasta(file.choose("."))%>%clean_names()
-proteome <- fasta %>%
-  mutate(uniprot_id = str_extract(seq_name, "\\|.*?\\|")%>% str_extract(.,"(\\w){1,}"))%>%
-  select(-seq_name) %>%
-  as_tibble()
 msmsscans <- fread("msmsScans.txt", na.strings = c("NaN")) %>% clean_names() %>% as_tibble()
 parameters <- fread("parameters.txt", na.strings = c("NaN")) %>% clean_names() %>% as_tibble()
 peptides <- fread("peptides.txt", na.strings = c("NaN")) %>% clean_names() %>% as_tibble()
 evidence <- fread("evidence.txt", na.strings = c("NaN"), colClasses = c(Intensity = "numeric")) %>% clean_names() %>% as_tibble()
 summary <- fread("summary.txt", na.strings = c("NaN")) %>% clean_names() %>% as_tibble()
 map <- fread("map.txt", na.strings = c("NaN")) %>% clean_names() %>% as_tibble()
+
+organism <- unique(map$strain)
+
+organism_mapping <- tibble(id = c("9606", "559292", "83333"), name = c("Homo sapiens", "Saccharomyces cerevisiae", "Escherichia coli"))
+
+organism_id <- organism_mapping$id[str_detect(organism, pattern = organism_mapping$name)]
+
+proteome <- fetch_uniprot_organism(organism = organism_id) %>%
+  rename(uniprot_id = Entry)
 ```
 
 ## Description of variables: {.tabset .tabset-pills}
@@ -218,7 +269,7 @@ n_conditions <- n_distinct(map$replicate_group)
 n_cols <- if_else(n_samples >16, 1, 2)
 n_cols_topN <- case_when(n_samples/4 <=1 ~ 2, n_samples/4 >1 & n_samples/4 <2 ~ 3, n_samples/4 >=2 ~ 4)
 MBR<- "MULTI-MATCH" %in% complete$type
-tryptic <- "Trypsin Digest" %in% complete$pipeline
+tryptic <- "tryptic control" %in% complete$pipeline
 lip <- "LiP" %in% complete$pipeline
 fractions <- "fraction" %in% names(complete)
 #n_fractions <- n_distinct(summary$fraction)-1
@@ -308,7 +359,7 @@ RSD_lip <- complete %>%
 if(nrow(RSD_lip) == 0){RSD_lip[1, ] <- NA}
 
 RSD_trypsin <- complete %>%
-  filter(!is.na(intensity), pipeline == "Trypsin Digest")%>%
+  filter(!is.na(intensity), pipeline == "tryptic control")%>%
   group_by(experiment)%>%
   summarize(median = median(intensity))%>%
   mutate(RSD_median = sd(median)/mean(median)*100, mean_median = mean(median), sd_median = sd(median))
@@ -1064,7 +1115,7 @@ paste("No solely tryptic sample was included in this experiment.")
 
 ```{r CV_peptide_trypsin, fig.height = 4+((n_conditions+1)*0.35), fig.width = 10, fig.align = "center", eval=tryptic}
 cv_peptide_trypsin <- complete_clean %>%
-  filter(!is.na(intensity), pipeline == "Trypsin Digest")%>%
+  filter(!is.na(intensity), pipeline == "tryptic control")%>%
   mutate(replicate_group = as.factor(replicate_group))%>%
   group_by(modified_sequence, charge)%>%
   mutate(cv_peptide = sd(intensity)/mean(intensity))%>%
@@ -1191,7 +1242,7 @@ normalised_lip <- complete_clean %>%
 
 
 normalised_trypsin <- complete_clean %>%
-  filter(!is.na(intensity), pipeline == "Trypsin Digest")%>%
+  filter(!is.na(intensity), pipeline == "tryptic control")%>%
   group_by(experiment, sequence)%>%
   mutate(sum_intensity = sum(intensity))%>%
   group_by(experiment)%>%
@@ -1202,7 +1253,7 @@ normalised_trypsin <- complete_clean %>%
   group_by(experiment)%>%
   mutate(normalised_intensity = (sum_intensity/median_run_intensity)*median_intensity)%>%
   mutate(normalised_intensity_log2 = log2(normalised_intensity))%>%
-  right_join(complete_clean%>%filter(pipeline == "Trypsin Digest"), by = c("experiment", "sequence"))%>%
+  right_join(complete_clean%>%filter(pipeline == "tryptic control"), by = c("experiment", "sequence"))%>%
   select(-median_run_intensity, -median_intensity)%>%
   group_by(experiment)%>%
   mutate(median_run_intensity = median(intensity, na.rm = TRUE))%>%
@@ -1241,7 +1292,7 @@ if(nrow(RSD_lip_normalised) == 0){RSD_lip_normalised[1, ] <- NA}
 
 RSD_trypsin_normalised <- normalised %>%
   distinct(sequence, normalised_intensity, pipeline)%>%
-  filter(!is.na(normalised_intensity), pipeline == "Trypsin Digest")%>%
+  filter(!is.na(normalised_intensity), pipeline == "tryptic control")%>%
   group_by(experiment)%>%
   summarize(median = median(normalised_intensity))%>%
   mutate(RSD_median = sd(median)/mean(median)*100, mean_median = mean(median), sd_median = sd(median))
@@ -1330,7 +1381,7 @@ missing_per_sample_lip <- normalised %>%
 
 missing_per_sample <- normalised %>%
   ungroup()%>%
-  filter(pipeline == "Trypsin Digest")%>%
+  filter(pipeline == "tryptic control")%>%
   distinct(experiment, sequence, normalised_intensity_log2, pipeline)%>%
   complete(experiment, sequence, pipeline)%>%
   group_by(experiment)%>%
@@ -1429,4 +1480,7 @@ complete_normalised <- normalised %>%
 
 ```{r export}
 fwrite(complete_normalised, "complete_normalised.txt", quote = FALSE, sep = "\t", row.names = FALSE, na = "NA")
+complete_normalised_maxLFQ <- complete_normalised %>%
+distinct(modified_sequence, charge, leading_razor_protein,normalised_precursor_intensity, normalised_precursor_intensity_log2, protein_intensity_log2, experiment, intensity)
+fwrite(complete_normalised_maxLFQ, "complete_normalised_maxLFQ.txt", quote = FALSE, sep = "\t", row.names = FALSE, na = "NA")
 ```
