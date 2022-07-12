@@ -1,1 +1,2 @@
-.html linguist-detectable=false
+special-vendored-path/* linguist-vendored
+jquery.Rmd linguist-vendored=false
