@@ -1,2 +1,3 @@
-special-vendored-path/* linguist-vendored
-jquery.Rmd linguist-vendored=false
+* linguist-vendored
+*.Rmd linguist-vendored=false
+*.R linguist-vendored=false
